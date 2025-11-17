@@ -1,14 +1,13 @@
-import { ProductLogEntry } from '../../types/product';
-import { apiClient } from './client';
+// src/lib/api/logs.ts
+import { supabase } from '../supabase';
 
-export interface LogsResponse {
-  logs: ProductLogEntry[];
+export async function fetchLogs(limit = 200) {
+  const { data, error } = await supabase
+    .from('product_logs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data;
 }
-
-export const logsApi = {
-  async getLogs(): Promise<ProductLogEntry[]> {
-    const endpoint = import.meta.env.VITE_LOGS_ENDPOINT || '/api/logs';
-    const res = await apiClient.get<LogsResponse>(endpoint);
-    return res.logs || [];
-  },
-};
