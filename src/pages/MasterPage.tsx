@@ -1,29 +1,37 @@
+// src/pages/MasterPage.tsx
 import React from 'react';
-import { useProducts } from '../hooks/useProducts';
-import { SheetGrid } from '../components/grid/SheetGrid';
-import { ValidationSummary } from '../components/grid/ValidationSummary';
-import { masterColumns } from '../lib/grid/column-defs-master';
-import { Card } from '../components/ui/Card';
+import { useProducts } from '@/hooks/useProducts';
+import { SheetGrid } from '@/components/grid/SheetGrid';
+import { ValidationSummary } from '@/components/grid/ValidationSummary';
+import { updateProductField, toggleValidation } from '@/lib/api/products';
+import { masterColumns } from '@/lib/grid/column-defs-master';
 
-export const MasterPage: React.FC = () => {
-  const { products, updateField, toggleValidation } = useProducts();
+export function MasterPage() {
+  const { products, loading } = useProducts();
+
+  const handleEdit = async (id: string, key: string, value: any) => {
+    await updateProductField(id, key, value);
+  };
+
+  const handleToggle = async (id: string) => {
+    const record = products.find((p) => p.id === id);
+    const next =
+      record?.validation_status === 'validated' ? 'pending' : 'validated';
+    await toggleValidation(id, next);
+  };
 
   return (
-    <>
-      <div className="flex items-center justify-between gap-3 mb-1">
-        <ValidationSummary products={products} />
-        <span className="text-[11px] text-slate-500">
-          Master: all fields, including raw Faire data and manual adjustments.
-        </span>
-      </div>
-      <Card className="p-3">
-        <SheetGrid
-          products={products}
-          columns={masterColumns}
-          onChangeCell={updateField}
-          onToggleValidated={toggleValidation}
-        />
-      </Card>
-    </>
+    <div className="flex flex-col gap-4">
+      <ValidationSummary products={products} />
+
+      <SheetGrid
+        loading={loading}
+        products={products}
+        columns={masterColumns}
+        onChangeCell={handleEdit}
+        onToggleValidated={handleToggle}
+        mode="master"
+      />
+    </div>
   );
-};
+}
