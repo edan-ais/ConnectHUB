@@ -1,29 +1,44 @@
-import { Product } from '../../types/product';
-import { apiClient } from './client';
+// src/lib/api/products.ts
+import { supabase } from '../supabase';
+import type { Product } from '@/types/product';
 
-export interface ProductsResponse {
-  products: Product[];
+export async function fetchActiveProducts(): Promise<Product[]> {
+  const { data, error } = await supabase
+    .from('master_products_active')
+    .select('*')
+    .order('name');
+
+  if (error) throw error;
+  return data as Product[];
 }
 
-export const productsApi = {
-  async getProducts(): Promise<Product[]> {
-    const res = await apiClient.get<ProductsResponse>(env.PRODUCTS_ENDPOINT);
-    return res.products || [];
-  },
+export async function fetchArchivedProducts(): Promise<Product[]> {
+  const { data, error } = await supabase
+    .from('master_products_archived')
+    .select('*');
 
-  async updateProductField(productId: string, key: string, value: unknown): Promise<Product> {
-    const res = await apiClient.patch<{ product: Product }>(
-      `${env.PRODUCT_UPDATE_ENDPOINT}?id=${encodeURIComponent(productId)}`,
-      { key, value }
-    );
-    return res.product;
-  },
+  if (error) throw error;
+  return data as Product[];
+}
 
-  async updateValidationStatus(productId: string, status: string): Promise<Product> {
-    const res = await apiClient.patch<{ product: Product }>(
-      `${env.PRODUCT_UPDATE_ENDPOINT}?id=${encodeURIComponent(productId)}`,
-      { key: 'validationStatus', value: status }
-    );
-    return res.product;
-  },
-};
+export async function updateProductField(
+  id: string,
+  key: string,
+  value: any
+) {
+  const { error } = await supabase
+    .from('master_products')
+    .update({ [key]: value })
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function toggleValidation(id: string, status: string) {
+  const { error } = await supabase
+    .from('master_products')
+    .update({ validation_status: status })
+    .eq('id', id);
+
+  if (error) throw error;
+}
