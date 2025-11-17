@@ -1,5 +1,3 @@
-import { env } from '../../config/env';
-
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const text = await res.text().catch(() => '');
