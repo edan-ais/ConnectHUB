@@ -1,35 +1,37 @@
+// src/pages/MainPage.tsx
 import React from 'react';
-import { useProducts } from '../hooks/useProducts';
-import { SheetGrid } from '../components/grid/SheetGrid';
-import { ValidationSummary } from '../components/grid/ValidationSummary';
-import { mainColumns } from '../lib/grid/column-defs-main';
-import { Card } from '../components/ui/Card';
-import { Callout } from '../components/ui/Callout';
-import { ListChecks } from 'lucide-react';
+import { useProducts } from '@/hooks/useProducts';
+import { SheetGrid } from '@/components/grid/SheetGrid';
+import { ValidationSummary } from '@/components/grid/ValidationSummary';
+import { updateProductField, toggleValidation } from '@/lib/api/products';
+import { mainColumns } from '@/lib/grid/column-defs-main';
 
-export const MainPage: React.FC = () => {
-  const { products, updateField, toggleValidation } = useProducts();
+export function MainPage() {
+  const { products, loading } = useProducts();
+
+  const handleEdit = async (id: string, key: string, value: any) => {
+    await updateProductField(id, key, value);
+  };
+
+  const handleToggle = async (id: string) => {
+    const record = products.find((p) => p.id === id);
+    const next =
+      record?.validation_status === 'validated' ? 'pending' : 'validated';
+    await toggleValidation(id, next);
+  };
 
   return (
-    <>
-      <div className="flex items-center justify-between gap-3 mb-1">
-        <ValidationSummary products={products} />
-        <span className="text-[11px] text-slate-500">
-          Main: reduced view for validation & location setup before syncing to Square/QuickBooks/Booker.
-        </span>
-      </div>
-      <Callout tone="info" icon={<ListChecks size={14} />}>
-        Validate each product once its description, price, and locations look correct.
-        Only validated products can be synced to Square/QuickBooks/Booker.
-      </Callout>
-      <Card className="p-3 mt-2">
-        <SheetGrid
-          products={products}
-          columns={mainColumns}
-          onChangeCell={updateField}
-          onToggleValidated={toggleValidation}
-        />
-      </Card>
-    </>
+    <div className="flex flex-col gap-4">
+      <ValidationSummary products={products} />
+
+      <SheetGrid
+        loading={loading}
+        products={products}
+        columns={mainColumns}
+        onChangeCell={handleEdit}
+        onToggleValidated={handleToggle}
+        mode="main"
+      />
+    </div>
   );
-};
+}
