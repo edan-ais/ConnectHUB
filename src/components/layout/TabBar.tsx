@@ -1,14 +1,20 @@
 import React from "react";
-import { Sheet, CheckSquare, PlusCircle, BarChart2, ListChecks } from "lucide-react";
+import {
+  Sheet,
+  CheckSquare,
+  PlusCircle,
+  BarChart2,
+  ListChecks
+} from "lucide-react";
 import { useInventoryStore } from "../../state/inventoryStore";
 import { TabId } from "../../lib/types";
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: "MASTER", label: "Master (SOT)", icon: Sheet },
-  { id: "MAIN", label: "Main (Validation)", icon: CheckSquare },
-  { id: "INTAKE", label: "Intake (Manual)", icon: PlusCircle },
-  { id: "REPORTS", label: "Reporting", icon: BarChart2 },
-  { id: "LOGS", label: "Activity Log", icon: ListChecks }
+  { id: "MASTER", label: "Master", icon: Sheet },
+  { id: "MAIN", label: "Main", icon: CheckSquare },
+  { id: "INTAKE", label: "Intake", icon: PlusCircle },
+  { id: "REPORTS", label: "Reports", icon: BarChart2 },
+  { id: "LOGS", label: "Log", icon: ListChecks }
 ];
 
 export const TabBar: React.FC = () => {
@@ -16,7 +22,7 @@ export const TabBar: React.FC = () => {
   const setActiveTab = useInventoryStore(s => s.setActiveTab);
 
   return (
-    <nav className="tabbar">
+    <nav className="tabbar tabbar-bottom">
       {TABS.map(tab => {
         const Icon = tab.icon;
         const active = activeTab === tab.id;
@@ -26,7 +32,7 @@ export const TabBar: React.FC = () => {
             className={`tabbar-item ${active ? "tabbar-item-active" : ""}`}
             onClick={() => setActiveTab(tab.id)}
           >
-            <Icon size={16} />
+            <Icon size={18} />
             <span>{tab.label}</span>
           </button>
         );
