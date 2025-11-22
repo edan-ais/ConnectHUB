@@ -1,172 +1,286 @@
-import React from "react";
-import { useInventoryStore } from "../../state/inventoryStore";
-import { Product } from "../../lib/types";
-import { ProductPreviewCell } from "../common/ProductPreviewCell";
-import { Pill } from "../common/Pill";
+import React, { useState, useMemo } from "react";
+import { useMasterInventory } from "../../hooks/useMasterInventory";
+import "../../styles/app.css";
 
-const statusColor = (status: Product["status"]) => {
-  switch (status) {
-    case "VALIDATED":
-      return "green";
-    case "NEW":
-    case "NEEDS_REVIEW":
-      return "yellow";
-    case "ARCHIVED":
-      return "gray";
-    default:
-      return "gray";
-  }
-};
+/**
+ * Helper: render image thumb if present
+ */
+const Thumb = ({ url }: { url?: string | null }) =>
+  url ? <img src={url} className="mini-image" /> : null;
 
+/**
+ * Final MasterGrid Component
+ * - Supabase-backed
+ * - Read-only
+ * - Global Search + Per-column Search
+ * - Frozen columns
+ * - Column groups
+ */
 export const MasterGrid: React.FC = () => {
-  const products = useInventoryStore(s => s.products);
-  const updateField = useInventoryStore(s => s.updateProductField);
-  const searchQuery = useInventoryStore(s => s.searchQuery);
+  const { rows, loading, error } = useMasterInventory();
 
-  // 🔍 Live search filter
-  const filteredProducts = products.filter(p => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
+  // -------------------------------
+  // 1) Global Search (from Zustand)
+  // -------------------------------
+  const [globalSearch, setGlobalSearch] = useState("");
 
+  // ----------------------------------------
+  // 2) Per-column search fields (local state)
+  // ----------------------------------------
+  const [columnFilters, setColumnFilters] = useState<{ [key: string]: string }>(
+    {}
+  );
+
+  const setFilter = (col: string, value: string) => {
+    setColumnFilters(prev => ({ ...prev, [col]: value }));
+  };
+
+  // ----------------------------------------
+  // 3) Filtered rows (global + columns)
+  // ----------------------------------------
+  const filteredRows = useMemo(() => {
+    return rows.filter(row => {
+      // GLOBAL SEARCH
+      if (globalSearch) {
+        const g = globalSearch.toLowerCase();
+        const match =
+          row.product_name?.toLowerCase().includes(g) ||
+          row.sku?.toLowerCase().includes(g) ||
+          row.vendor?.toLowerCase().includes(g) ||
+          row.category?.toLowerCase().includes(g) ||
+          (row.description || "").toLowerCase().includes(g);
+        if (!match) return false;
+      }
+
+      // COLUMN FILTERS
+      for (const [col, value] of Object.entries(columnFilters)) {
+        if (!value) continue;
+        const v = value.toLowerCase();
+        const cell = (row as any)[col];
+        if (!String(cell || "").toLowerCase().includes(v)) return false;
+      }
+
+      return true;
+    });
+  }, [rows, globalSearch, columnFilters]);
+
+  // -------------------------------
+  // Render states
+  // -------------------------------
+  if (loading) {
     return (
-      p.name.toLowerCase().includes(q) ||
-      p.sku.toLowerCase().includes(q) ||
-      (p.vendorName || "").toLowerCase().includes(q) ||
-      (p.category || "").toLowerCase().includes(q) ||
-      p.description.toLowerCase().includes(q) ||
-      p.tags.some(t => t.toLowerCase().includes(q))
+      <div className="sheet-container">
+        <div className="sheet-name">Master (loading…)</div>
+        <div className="empty-state">Loading Master inventory…</div>
+      </div>
     );
-  });
+  }
 
-  const handleChange =
-    (id: string, field: keyof Product) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const value: any = e.target.value;
-      updateField(id, field, value);
-    };
+  if (error) {
+    return (
+      <div className="sheet-container">
+        <div className="sheet-name">Master (error)</div>
+        <div className="empty-state">Error: {error}</div>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------
+  // MASTER COLUMN DEFINITIONS (for headers + filters)
+  // ----------------------------------------------------
+  const columns = [
+    { key: "status", label: "Status", sticky: true },
+    { key: "product_name", label: "Product Name", sticky: true },
+    { key: "sku", label: "SKU" },
+    { key: "vendor", label: "Vendor" },
+    { key: "total_inventory_on_hand", label: "Total On Hand" },
+    { key: "total_inventory_on_the_way", label: "Total On The Way" },
+    { key: "incoming_total", label: "Incoming Total" },
+    { key: "qty_coastal_cowgirl", label: "Qty CC" },
+    { key: "qty_salty_tails", label: "Qty ST" },
+    { key: "qty_central_valley", label: "Qty CV" },
+    { key: "new_qty_coastal_cowgirl", label: "New Qty CC" },
+    { key: "new_qty_salty_tails", label: "New Qty ST" },
+    { key: "new_qty_central_valley", label: "New Qty CV" },
+    { key: "reorder_point", label: "Reorder Point" },
+
+    { key: "product_type", label: "Product Type" },
+    { key: "product_category", label: "Product Category" },
+    { key: "category", label: "Category" },
+    { key: "reporting_category", label: "Reporting Category" },
+    { key: "description", label: "Description" },
+    { key: "sales_description", label: "Sales Description" },
+    { key: "purchase_description", label: "Purchase Description" },
+    { key: "tags", label: "Tags" },
+
+    { key: "single_parent_or_variant", label: "Parent/Variant" },
+    { key: "variant_name", label: "Variant Name" },
+    { key: "variant_title", label: "Variant Title" },
+    { key: "option1_name", label: "Option1 Name" },
+    { key: "option1_value", label: "Option1 Value" },
+    { key: "option2_name", label: "Option2 Name" },
+    { key: "option2_value", label: "Option2 Value" },
+    { key: "option3_name", label: "Option3 Name" },
+    { key: "option3_value", label: "Option3 Value" },
+    { key: "option4_name", label: "Option4 Name" },
+    { key: "option4_value", label: "Option4 Value" },
+
+    { key: "handle", label: "Handle" },
+    { key: "permalink", label: "Permalink" },
+    { key: "image_url", label: "Image" },
+    { key: "variant_image_url", label: "Variant Image" },
+    { key: "square_image_id", label: "Square Image ID" },
+
+    { key: "price", label: "Price" },
+    { key: "online_price", label: "Online Price" },
+    { key: "cost", label: "Cost" },
+    { key: "compare_at", label: "Compare At" },
+    { key: "default_unit_cost", label: "Default Unit Cost" },
+    { key: "income_account", label: "Income Account" },
+    { key: "expense_account", label: "Expense Account" },
+    { key: "inventory_asset_account", label: "Inventory Asset Account" },
+
+    { key: "sales_tax_rate", label: "Tax Rate" },
+    { key: "tax_code", label: "Tax Code" },
+    { key: "taxable", label: "Taxable" },
+
+    { key: "last_delivery_date", label: "Last Delivery" },
+    { key: "weight_lb", label: "Weight (lb)" },
+
+    { key: "shipping_enabled", label: "Shipping" },
+    { key: "self_serve_ordering_enabled", label: "Self-Serve" },
+    { key: "delivery_enabled", label: "Delivery" },
+    { key: "pickup_enabled", label: "Pickup" },
+
+    { key: "stock_alert_enabled_cc", label: "Alert CC" },
+    { key: "stock_alert_count_cc", label: "Alert CC Count" },
+    { key: "stock_alert_enabled_st", label: "Alert ST" },
+    { key: "stock_alert_count_st", label: "Alert ST Count" },
+    { key: "stock_alert_enabled_cv", label: "Alert CV" },
+    { key: "stock_alert_count_cv", label: "Alert CV Count" },
+
+    { key: "total_quantity", label: "Total Quantity" },
+    { key: "current_qty_cc", label: "Current CC" },
+    { key: "current_qty_st", label: "Current ST" },
+    { key: "current_qty_cv", label: "Current CV" },
+    { key: "quantity_as_of_date", label: "As Of" },
+
+    { key: "parent_sku", label: "Parent SKU" },
+    { key: "barcode", label: "Barcode" },
+    { key: "gtin", label: "GTIN" },
+    { key: "vendor_code", label: "Vendor Code" },
+    { key: "sellable", label: "Sellable" },
+    { key: "stockable", label: "Stockable" },
+    { key: "contains_alcohol", label: "Contains Alcohol" },
+    { key: "skip_pos_detail", label: "Skip POS Detail" },
+
+    { key: "shopify_product_id", label: "Shopify Product ID" },
+    { key: "shopify_variant_id", label: "Shopify Variant ID" },
+    { key: "variants_json", label: "Variants JSON" },
+    { key: "square_object_id", label: "Square Object ID" },
+    { key: "square_variation_id", label: "Square Variation ID" },
+    { key: "stock_json", label: "Stock JSON" },
+    { key: "quickbooks_id", label: "QuickBooks ID" },
+    { key: "booker_id", label: "Booker ID" },
+    { key: "seo_title", label: "SEO Title" },
+    { key: "seo_description", label: "SEO Description" },
+
+    { key: "archived", label: "Archived" },
+    { key: "archive_reason", label: "Reason" },
+    { key: "archived_timestamp", label: "Archived Timestamp" },
+    { key: "master_id", label: "Master ID" },
+    { key: "date_added", label: "Date Added" },
+    { key: "last_updated", label: "Last Updated" },
+    { key: "last_synced_square", label: "Synced Square" },
+    { key: "last_synced_qb", label: "Synced QB" },
+    { key: "last_synced_booker", label: "Synced Booker" }
+  ];
 
   return (
     <div className="sheet-container fade-in">
-      <div className="sheet-name">Master (Source of Truth)</div>
+      <div className="sheet-name">
+        Master (Source of Truth · read-only)
+      </div>
+
+      {/* --------------------------- */}
+      {/* GLOBAL SEARCH BAR           */}
+      {/* --------------------------- */}
+      <div className="global-search-bar">
+        <input
+          type="text"
+          placeholder="Search all columns…"
+          value={globalSearch}
+          onChange={e => setGlobalSearch(e.target.value)}
+        />
+      </div>
+
       <div className="sheet-table-wrapper">
-        <table className="sheet-table">
+        <table className="sheet-table sheet-table-master">
           <thead>
+            {/* Column headers */}
             <tr>
-              <th className="col-sticky">Status</th>
-              <th className="col-sticky">Product</th>
-              <th>SKU</th>
-              <th>Vendor</th>
-              <th>Description</th>
-              <th>Category</th>
-              <th>On Hand</th>
-              <th>On Order</th>
-              <th>Salty Tails only?</th>
-              <th>Push ➝ Square</th>
-              <th>Push ➝ QB</th>
-              <th>Push ➝ Booker</th>
+              {columns.map(col => (
+                <th
+                  key={col.key}
+                  className={col.sticky ? "col-sticky" : ""}
+                >
+                  {col.label}
+                </th>
+              ))}
+            </tr>
+
+            {/* Column search filters */}
+            <tr className="column-filter-row">
+              {columns.map(col => (
+                <th
+                  key={col.key}
+                  className={col.sticky ? "col-sticky" : ""}
+                >
+                  <input
+                    className="column-filter-input"
+                    placeholder="Filter…"
+                    value={columnFilters[col.key] || ""}
+                    onChange={e => setFilter(col.key, e.target.value)}
+                  />
+                </th>
+              ))}
             </tr>
           </thead>
+
           <tbody>
-            {filteredProducts.map(p => (
-              <tr
-                key={p.id}
-                className={`row-status-${p.status.toLowerCase()} ${
-                  p.missingFields.length > 0 ? "row-missing" : ""
-                } fade-in-row`}
-              >
-                <td className="col-sticky">
-                  <Pill color={statusColor(p.status)}>
-                    {p.status.replace("_", " ")}
-                  </Pill>
-                  {p.missingFields.length > 0 && (
-                    <div className="missing-chip">
-                      Missing: {p.missingFields.join(", ")}
-                    </div>
-                  )}
-                </td>
-                <td className="col-sticky">
-                  <ProductPreviewCell imageUrl={p.imageUrl} name={p.name} />
-                </td>
-                <td>
-                  <input
-                    className="cell-input"
-                    value={p.sku}
-                    onChange={handleChange(p.id, "sku")}
-                  />
-                </td>
-                <td>
-                  <input
-                    className="cell-input"
-                    value={p.vendorName || ""}
-                    onChange={handleChange(p.id, "vendorName")}
-                  />
-                </td>
-                <td>
-                  <textarea
-                    className="cell-input cell-input-multiline"
-                    value={p.description}
-                    onChange={handleChange(p.id, "description")}
-                  />
-                </td>
-                <td>
-                  <input
-                    className="cell-input"
-                    value={p.category || ""}
-                    onChange={handleChange(p.id, "category")}
-                  />
-                </td>
-                <td className="cell-number">{p.onHandTotal}</td>
-                <td className="cell-number">{p.onOrderTotal}</td>
-                <td className="cell-center">
-                  <input
-                    type="checkbox"
-                    checked={p.isSaltyTailsOnly}
-                    onChange={e =>
-                      updateField(p.id, "isSaltyTailsOnly", e.target.checked)
-                    }
-                  />
-                </td>
-                <td className="cell-center">
-                  <input
-                    type="checkbox"
-                    checked={p.pushToSquare}
-                    onChange={e =>
-                      updateField(p.id, "pushToSquare", e.target.checked)
-                    }
-                  />
-                </td>
-                <td className="cell-center">
-                  <input
-                    type="checkbox"
-                    checked={p.pushToQuickBooks}
-                    onChange={e =>
-                      updateField(p.id, "pushToQuickBooks", e.target.checked)
-                    }
-                  />
-                </td>
-                <td className="cell-center">
-                  <input
-                    type="checkbox"
-                    checked={p.pushToBooker}
-                    onChange={e =>
-                      updateField(p.id, "pushToBooker", e.target.checked)
-                    }
-                  />
-                </td>
+            {filteredRows.map(row => (
+              <tr key={row.id} className={`master-row status-${row.status}`}>
+                {columns.map(col => {
+                  const value = (row as any)[col.key];
+
+                  // special render: images
+                  if (col.key === "image_url") return <td key={col.key}><Thumb url={value} /></td>;
+                  if (col.key === "variant_image_url") return <td key={col.key}><Thumb url={value} /></td>;
+
+                  // boolean fields
+                  if (typeof value === "boolean") {
+                    return <td key={col.key}>{value ? "Yes" : ""}</td>;
+                  }
+
+                  // default
+                  return <td key={col.key}>{String(value || "")}</td>;
+                })}
               </tr>
             ))}
 
-            {filteredProducts.length === 0 && (
+            {filteredRows.length === 0 && (
               <tr>
-                <td colSpan={12} style={{ textAlign: "center", padding: "20px" }}>
+                <td colSpan={columns.length} style={{ textAlign: "center", padding: 20 }}>
                   No products match your search.
                 </td>
               </tr>
             )}
           </tbody>
+
         </table>
       </div>
     </div>
   );
 };
+
 
