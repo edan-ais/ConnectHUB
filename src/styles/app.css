@@ -48,15 +48,33 @@ body {
   font-weight: 600;
 }
 
-.topbar-center,
+.topbar-center {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex: 1;
+}
+
 .topbar-right {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(249, 250, 251, 0.25);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+}
 
-/* SEARCH BAR (Global search only) */
+/* Global search bar (only here, not in filters) */
 .topbar-search {
   display: flex;
   align-items: center;
@@ -83,7 +101,53 @@ body {
 
 
 /* ============================================================
-   BOTTOM TAB BAR (Mobile-style)
+   PILLS (for Approved / Needs Approval cards, etc.)
+   ============================================================ */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  border: 1px solid transparent;
+}
+
+.pill-green {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #22c55e;
+}
+
+.pill-yellow {
+  background: #fef9c3;
+  color: #854d0e;
+  border-color: #eab308;
+}
+
+.pill-red {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #ef4444;
+}
+
+
+
+/* ============================================================
+   APP CONTENT AREA
+   ============================================================ */
+.app-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 60px; /* bottom tabbar space */
+}
+
+
+
+/* ============================================================
+   BOTTOM TABBAR (mobile-like)
    ============================================================ */
 .tabbar-bottom {
   position: fixed;
@@ -116,7 +180,7 @@ body {
 }
 
 .tabbar-item:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .tabbar-item-active {
@@ -127,20 +191,7 @@ body {
 
 
 /* ============================================================
-   APP CONTENT WINDOW
-   ============================================================ */
-.app-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 60px; /* leave space for bottom bar */
-  overflow: hidden;
-}
-
-
-
-/* ============================================================
-   SHEET CONTAINER
+   SHEET CONTAINER + TITLE
    ============================================================ */
 .sheet-container {
   display: flex;
@@ -150,16 +201,20 @@ body {
 
 .sheet-name {
   padding: 8px 14px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   border-bottom: 1px solid #d1d5db;
   background: #e5e7eb;
 }
 
+.sheet-name-large {
+  font-size: 16px;
+}
+
 
 
 /* ============================================================
-   TABLE WRAPPER
+   SHEET TABLE WRAPPER
    ============================================================ */
 .sheet-table-wrapper {
   flex: 1;
@@ -167,6 +222,12 @@ body {
   background: #ffffff;
   position: relative;
   scrollbar-width: thin;
+}
+
+.wide-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-width: 100%;
 }
 
 
@@ -190,11 +251,7 @@ body {
   background-clip: padding-box;
 }
 
-/* No truncation of header text */
-.no-shorten th {
-  white-space: nowrap;
-}
-
+/* Header cells */
 .sheet-table th {
   background: #f3f4f6;
   font-weight: 600;
@@ -204,10 +261,27 @@ body {
   vertical-align: top;
 }
 
+/* Prevent truncation of header text */
+.no-shorten th {
+  white-space: nowrap;
+}
+
+/* Group header row */
+.header-group-row th {
+  background: #e5e7eb;
+  font-size: 12px;
+  text-align: center;
+  border-bottom: 2px solid #9ca3af;
+}
+
+.header-group-cell {
+  padding: 6px 10px;
+}
+
 
 
 /* ============================================================
-   COLUMN HEADER CELL
+   HEADER CELL WRAPPER
    ============================================================ */
 .header-cell {
   display: flex;
@@ -225,7 +299,7 @@ body {
 
 
 /* ============================================================
-   FILTER BUTTON
+   FILTER BUTTON + MENU
    ============================================================ */
 .filter-button {
   background: transparent;
@@ -235,6 +309,9 @@ body {
   color: #9ca3af;
   border-radius: 4px;
   transition: 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .filter-button:hover {
@@ -243,15 +320,11 @@ body {
 }
 
 .filter-button.active {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(59, 130, 246, 0.18);
   color: #2563eb;
 }
 
-
-
-/* ============================================================
-   FILTER DROPDOWN MENU (EXCEL-STYLE)
-   ============================================================ */
+/* Dropdown */
 .filter-menu {
   position: absolute;
   top: calc(100% + 4px);
@@ -260,15 +333,21 @@ body {
   border: 1px solid #d1d5db;
   border-radius: 8px;
   min-width: 240px;
-  max-width: 300px;
+  max-width: 320px;
   z-index: 2000;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.25);
   animation: dropdown-fade 0.15s ease-out;
 }
 
 @keyframes dropdown-fade {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .filter-section {
@@ -287,7 +366,7 @@ body {
   border-radius: 6px;
   cursor: pointer;
   text-align: left;
-  transition: background 0.1s ease;
+  transition: background 0.12s ease;
 }
 
 .filter-section button:hover {
@@ -300,9 +379,9 @@ body {
 }
 
 .filter-value-list {
-  max-height: 250px;
+  max-height: 230px;
   overflow-y: auto;
-  padding: 6px 10px;
+  padding: 6px 10px 0;
 }
 
 .filter-checkbox-row {
@@ -326,33 +405,65 @@ body {
   cursor: pointer;
 }
 
+/* Filter footer */
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 0 0 8px 8px;
+}
+
+.filter-action-btn {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.filter-action-btn:hover {
+  background: #e5e7eb;
+}
+
+.filter-action-btn.primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.filter-action-btn.primary:hover {
+  background: #1d4ed8;
+}
+
 
 
 /* ============================================================
-   STICKY COLUMNS (STATUS + PRODUCT NAME)
+   COLUMN RESIZE HANDLE
    ============================================================ */
-.sticky-col-status {
-  position: sticky;
-  left: 0;
-  background: #ffffff;
-  z-index: 10;
-  min-width: 180px;
-  max-width: 240px;
+.col-resize-handle {
+  position: absolute;
+  right: -3px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 5;
 }
 
-.sticky-col-product {
-  position: sticky;
-  left: 200px; /* width of status col */
-  background: #ffffff;
-  z-index: 9;
-  min-width: 260px;
-  max-width: 320px;
+.col-resize-handle:hover {
+  background: rgba(59, 130, 246, 0.35);
 }
 
 
 
 /* ============================================================
-   ROW STATES / HIGHLIGHTING
+   ROWS / CELLS
    ============================================================ */
 .master-row {
   transition: background 0.15s ease;
@@ -362,11 +473,6 @@ body {
   background: #f9fafb;
 }
 
-
-
-/* ============================================================
-   IMAGES
-   ============================================================ */
 .mini-image {
   width: 34px;
   height: 34px;
@@ -376,11 +482,6 @@ body {
   background: #e5e7eb;
 }
 
-
-
-/* ============================================================
-   INPUTS
-   ============================================================ */
 .cell-input {
   width: 100%;
   border: none;
@@ -410,6 +511,54 @@ body {
 
 
 /* ============================================================
+   SIMPLE CARD GRID (for Approved / Needs Approval summary)
+   ============================================================ */
+.card-grid {
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  overflow: auto;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.card-subtitle {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.card-body {
+  padding: 8px 10px;
+}
+
+.card-footer {
+  padding: 8px 10px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+
+
+/* ============================================================
    ANIMATIONS
    ============================================================ */
 .fade-in {
@@ -417,6 +566,12 @@ body {
 }
 
 @keyframes fadein {
-  from { opacity: 0; transform: translateY(3px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
