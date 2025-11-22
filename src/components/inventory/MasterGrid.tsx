@@ -1,72 +1,92 @@
 import React, { useState, useMemo } from "react";
 import { useMasterInventory } from "../../hooks/useMasterInventory";
+import { ChevronDown } from "lucide-react";
 import "../../styles/app.css";
 
-/**
- * Helper: render image thumb if present
- */
-const Thumb = ({ url }: { url?: string | null }) =>
-  url ? <img src={url} className="mini-image" /> : null;
+// Dropdown filter for each column
+interface ColumnFilterMenuProps {
+  columnKey: string;
+  values: string[];
+  activeValues: string[];
+  onChange: (vals: string[]) => void;
+  onSortAsc: () => void;
+  onSortDesc: () => void;
+  clearSort: () => void;
+}
+const ColumnFilterMenu: React.FC<ColumnFilterMenuProps> = ({
+  columnKey,
+  values,
+  activeValues,
+  onChange,
+  onSortAsc,
+  onSortDesc,
+  clearSort
+}) => {
+  const [search, setSearch] = useState("");
 
-/**
- * Final MasterGrid Component
- * - Supabase-backed
- * - Read-only
- * - Global Search + Per-column Search
- * - Frozen columns
- * - Column groups
- */
+  const filteredValues = values.filter(v =>
+    v.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const toggle = (val: string) => {
+    if (activeValues.includes(val)) {
+      onChange(activeValues.filter(v => v !== val));
+    } else {
+      onChange([...activeValues, val]);
+    }
+  };
+
+  return (
+    <div className="filter-menu">
+      <div className="filter-section">
+        <button onClick={onSortAsc}>Sort A → Z</button>
+        <button onClick={onSortDesc}>Sort Z → A</button>
+        <button onClick={clearSort}>Clear Sort</button>
+      </div>
+
+      <div className="filter-divider" />
+
+      <div className="filter-section">
+        <input
+          type="text"
+          placeholder="Search values…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="filter-search-input"
+        />
+
+        <div className="filter-value-list">
+          {filteredValues.map(val => (
+            <label key={val} className="filter-checkbox-row">
+              <input
+                type="checkbox"
+                checked={activeValues.includes(val)}
+                onChange={() => toggle(val)}
+              />
+              {val || "(blank)"}
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const MasterGrid: React.FC = () => {
   const { rows, loading, error } = useMasterInventory();
 
-  // -------------------------------
-  // 1) Global Search (from Zustand)
-  // -------------------------------
-  const [globalSearch, setGlobalSearch] = useState("");
+  // Global search bar is in TopBar, pulled from Zustand
+  const [sortBy, setSortBy] = useState<{ col: string; dir: "asc" | "desc" | null }>({
+    col: "",
+    dir: null
+  });
 
-  // ----------------------------------------
-  // 2) Per-column search fields (local state)
-  // ----------------------------------------
-  const [columnFilters, setColumnFilters] = useState<{ [key: string]: string }>(
-    {}
-  );
+  // Active value filters per column
+  const [filters, setFilters] = useState<{ [key: string]: string[] }>({});
 
-  const setFilter = (col: string, value: string) => {
-    setColumnFilters(prev => ({ ...prev, [col]: value }));
-  };
+  // Which column dropdown is currently open
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
 
-  // ----------------------------------------
-  // 3) Filtered rows (global + columns)
-  // ----------------------------------------
-  const filteredRows = useMemo(() => {
-    return rows.filter(row => {
-      // GLOBAL SEARCH
-      if (globalSearch) {
-        const g = globalSearch.toLowerCase();
-        const match =
-          row.product_name?.toLowerCase().includes(g) ||
-          row.sku?.toLowerCase().includes(g) ||
-          row.vendor?.toLowerCase().includes(g) ||
-          row.category?.toLowerCase().includes(g) ||
-          (row.description || "").toLowerCase().includes(g);
-        if (!match) return false;
-      }
-
-      // COLUMN FILTERS
-      for (const [col, value] of Object.entries(columnFilters)) {
-        if (!value) continue;
-        const v = value.toLowerCase();
-        const cell = (row as any)[col];
-        if (!String(cell || "").toLowerCase().includes(v)) return false;
-      }
-
-      return true;
-    });
-  }, [rows, globalSearch, columnFilters]);
-
-  // -------------------------------
-  // Render states
-  // -------------------------------
   if (loading) {
     return (
       <div className="sheet-container">
@@ -85,9 +105,9 @@ export const MasterGrid: React.FC = () => {
     );
   }
 
-  // ----------------------------------------------------
-  // MASTER COLUMN DEFINITIONS (for headers + filters)
-  // ----------------------------------------------------
+  // --------------------------
+  // COLUMN DEFINITIONS
+  // --------------------------
   const columns = [
     { key: "status", label: "Status", sticky: true },
     { key: "product_name", label: "Product Name", sticky: true },
@@ -103,7 +123,6 @@ export const MasterGrid: React.FC = () => {
     { key: "new_qty_salty_tails", label: "New Qty ST" },
     { key: "new_qty_central_valley", label: "New Qty CV" },
     { key: "reorder_point", label: "Reorder Point" },
-
     { key: "product_type", label: "Product Type" },
     { key: "product_category", label: "Product Category" },
     { key: "category", label: "Category" },
@@ -112,7 +131,6 @@ export const MasterGrid: React.FC = () => {
     { key: "sales_description", label: "Sales Description" },
     { key: "purchase_description", label: "Purchase Description" },
     { key: "tags", label: "Tags" },
-
     { key: "single_parent_or_variant", label: "Parent/Variant" },
     { key: "variant_name", label: "Variant Name" },
     { key: "variant_title", label: "Variant Title" },
@@ -124,13 +142,14 @@ export const MasterGrid: React.FC = () => {
     { key: "option3_value", label: "Option3 Value" },
     { key: "option4_name", label: "Option4 Name" },
     { key: "option4_value", label: "Option4 Value" },
-
     { key: "handle", label: "Handle" },
     { key: "permalink", label: "Permalink" },
     { key: "image_url", label: "Image" },
     { key: "variant_image_url", label: "Variant Image" },
     { key: "square_image_id", label: "Square Image ID" },
 
+    // Pricing, Accounts, Fulfillment, Identifiers, Integrations, Lifecycle...
+    // (Rest of columns are unchanged; same as previous version)
     { key: "price", label: "Price" },
     { key: "online_price", label: "Online Price" },
     { key: "cost", label: "Cost" },
@@ -139,32 +158,26 @@ export const MasterGrid: React.FC = () => {
     { key: "income_account", label: "Income Account" },
     { key: "expense_account", label: "Expense Account" },
     { key: "inventory_asset_account", label: "Inventory Asset Account" },
-
     { key: "sales_tax_rate", label: "Tax Rate" },
     { key: "tax_code", label: "Tax Code" },
     { key: "taxable", label: "Taxable" },
-
     { key: "last_delivery_date", label: "Last Delivery" },
     { key: "weight_lb", label: "Weight (lb)" },
-
     { key: "shipping_enabled", label: "Shipping" },
     { key: "self_serve_ordering_enabled", label: "Self-Serve" },
     { key: "delivery_enabled", label: "Delivery" },
     { key: "pickup_enabled", label: "Pickup" },
-
     { key: "stock_alert_enabled_cc", label: "Alert CC" },
     { key: "stock_alert_count_cc", label: "Alert CC Count" },
     { key: "stock_alert_enabled_st", label: "Alert ST" },
     { key: "stock_alert_count_st", label: "Alert ST Count" },
     { key: "stock_alert_enabled_cv", label: "Alert CV" },
     { key: "stock_alert_count_cv", label: "Alert CV Count" },
-
     { key: "total_quantity", label: "Total Quantity" },
     { key: "current_qty_cc", label: "Current CC" },
     { key: "current_qty_st", label: "Current ST" },
     { key: "current_qty_cv", label: "Current CV" },
     { key: "quantity_as_of_date", label: "As Of" },
-
     { key: "parent_sku", label: "Parent SKU" },
     { key: "barcode", label: "Barcode" },
     { key: "gtin", label: "GTIN" },
@@ -173,7 +186,6 @@ export const MasterGrid: React.FC = () => {
     { key: "stockable", label: "Stockable" },
     { key: "contains_alcohol", label: "Contains Alcohol" },
     { key: "skip_pos_detail", label: "Skip POS Detail" },
-
     { key: "shopify_product_id", label: "Shopify Product ID" },
     { key: "shopify_variant_id", label: "Shopify Variant ID" },
     { key: "variants_json", label: "Variants JSON" },
@@ -184,7 +196,6 @@ export const MasterGrid: React.FC = () => {
     { key: "booker_id", label: "Booker ID" },
     { key: "seo_title", label: "SEO Title" },
     { key: "seo_description", label: "SEO Description" },
-
     { key: "archived", label: "Archived" },
     { key: "archive_reason", label: "Reason" },
     { key: "archived_timestamp", label: "Archived Timestamp" },
@@ -196,91 +207,135 @@ export const MasterGrid: React.FC = () => {
     { key: "last_synced_booker", label: "Synced Booker" }
   ];
 
+  // -------------------------
+  // FILTER + SORT ENGINE
+  // -------------------------
+  const processedRows = useMemo(() => {
+    let output = [...rows];
+
+    // FILTERS (checkbox unique values)
+    for (const key of Object.keys(filters)) {
+      const allowed = filters[key];
+      if (allowed.length === 0) continue;
+
+      output = output.filter(row => {
+        const v = String((row as any)[key] ?? "");
+        return allowed.includes(v);
+      });
+    }
+
+    // SORT
+    if (sortBy.dir) {
+      output.sort((a, b) => {
+        const A = String((a as any)[sortBy.col] ?? "").toLowerCase();
+        const B = String((b as any)[sortBy.col] ?? "").toLowerCase();
+        if (A < B) return sortBy.dir === "asc" ? -1 : 1;
+        if (A > B) return sortBy.dir === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return output;
+  }, [rows, filters, sortBy]);
+
+  // -----------------------------------
+  // Render table
+  // -----------------------------------
   return (
     <div className="sheet-container fade-in">
-      <div className="sheet-name">
-        Master (Source of Truth · read-only)
-      </div>
+      <div className="sheet-name">Master (Source of Truth · read-only)</div>
 
-      {/* --------------------------- */}
-      {/* GLOBAL SEARCH BAR           */}
-      {/* --------------------------- */}
-      <div className="global-search-bar">
-        <input
-          type="text"
-          placeholder="Search all columns…"
-          value={globalSearch}
-          onChange={e => setGlobalSearch(e.target.value)}
-        />
-      </div>
-
-      <div className="sheet-table-wrapper">
-        <table className="sheet-table sheet-table-master">
+      <div className="sheet-table-wrapper wide-scroll">
+        <table className="sheet-table sheet-table-master no-shorten">
           <thead>
-            {/* Column headers */}
             <tr>
               {columns.map(col => (
-                <th
-                  key={col.key}
-                  className={col.sticky ? "col-sticky" : ""}
-                >
-                  {col.label}
-                </th>
-              ))}
-            </tr>
+                <th key={col.key} className={col.sticky ? "col-sticky" : ""}>
+                  <div className="header-cell">
+                    <span>{col.label}</span>
+                    <button
+                      className="filter-button"
+                      onClick={() =>
+                        setOpenFilter(openFilter === col.key ? null : col.key)
+                      }
+                    >
+                      <ChevronDown size={14} />
+                    </button>
 
-            {/* Column search filters */}
-            <tr className="column-filter-row">
-              {columns.map(col => (
-                <th
-                  key={col.key}
-                  className={col.sticky ? "col-sticky" : ""}
-                >
-                  <input
-                    className="column-filter-input"
-                    placeholder="Filter…"
-                    value={columnFilters[col.key] || ""}
-                    onChange={e => setFilter(col.key, e.target.value)}
-                  />
+                    {openFilter === col.key && (
+                      <ColumnFilterMenu
+                        columnKey={col.key}
+                        values={[
+                          ...new Set(
+                            rows.map(r => String((r as any)[col.key] ?? ""))
+                          )
+                        ]}
+                        activeValues={filters[col.key] || []}
+                        onChange={vals =>
+                          setFilters(prev => ({ ...prev, [col.key]: vals }))
+                        }
+                        onSortAsc={() => {
+                          setSortBy({ col: col.key, dir: "asc" });
+                          setOpenFilter(null);
+                        }}
+                        onSortDesc={() => {
+                          setSortBy({ col: col.key, dir: "desc" });
+                          setOpenFilter(null);
+                        }}
+                        clearSort={() => {
+                          setSortBy({ col: "", dir: null });
+                          setOpenFilter(null);
+                        }}
+                      />
+                    )}
+                  </div>
                 </th>
               ))}
             </tr>
           </thead>
 
           <tbody>
-            {filteredRows.map(row => (
-              <tr key={row.id} className={`master-row status-${row.status}`}>
+            {processedRows.map(row => (
+              <tr key={row.id} className={`master-row row-${row.status}`}>
                 {columns.map(col => {
-                  const value = (row as any)[col.key];
+                  const v = (row as any)[col.key];
+                  const stickyClass = col.sticky ? "col-sticky" : "";
 
-                  // special render: images
-                  if (col.key === "image_url") return <td key={col.key}><Thumb url={value} /></td>;
-                  if (col.key === "variant_image_url") return <td key={col.key}><Thumb url={value} /></td>;
-
-                  // boolean fields
-                  if (typeof value === "boolean") {
-                    return <td key={col.key}>{value ? "Yes" : ""}</td>;
+                  if (col.key === "image_url" || col.key === "variant_image_url") {
+                    return (
+                      <td key={col.key} className={stickyClass}>
+                        {v ? <img src={v} className="mini-image" /> : ""}
+                      </td>
+                    );
                   }
 
-                  // default
-                  return <td key={col.key}>{String(value || "")}</td>;
+                  if (typeof v === "boolean") {
+                    return (
+                      <td key={col.key} className={stickyClass}>
+                        {v ? "Yes" : ""}
+                      </td>
+                    );
+                  }
+
+                  return (
+                    <td key={col.key} className={stickyClass}>
+                      {String(v ?? "")}
+                    </td>
+                  );
                 })}
               </tr>
             ))}
 
-            {filteredRows.length === 0 && (
+            {processedRows.length === 0 && (
               <tr>
-                <td colSpan={columns.length} style={{ textAlign: "center", padding: 20 }}>
-                  No products match your search.
+                <td colSpan={columns.length} className="empty-state">
+                  No products match filters.
                 </td>
               </tr>
             )}
           </tbody>
-
         </table>
       </div>
     </div>
   );
 };
-
-
