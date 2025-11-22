@@ -1,7 +1,6 @@
 import React from "react";
 import { TopBar } from "./TopBar";
 import { TabBar } from "./TabBar";
-import { StatusBar } from "./StatusBar";
 import { useInventoryStore } from "../../state/inventoryStore";
 import { MasterGrid } from "../inventory/MasterGrid";
 import { MainValidationView } from "../inventory/MainValidationView";
@@ -32,9 +31,9 @@ export const Shell: React.FC = () => {
   return (
     <div className="app-root">
       <TopBar />
-      <TabBar />
       <div className="app-content">{renderTab()}</div>
-      <StatusBar />
+      {/* Bottom mobile-style navigation */}
+      <TabBar />
     </div>
   );
 };
