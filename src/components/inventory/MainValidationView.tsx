@@ -13,10 +13,24 @@ export const MainValidationView: React.FC = () => {
   const products = useInventoryStore(s => s.products);
   const validateProduct = useInventoryStore(s => s.validateProduct);
   const updateField = useInventoryStore(s => s.updateProductField);
+  const searchQuery = useInventoryStore(s => s.searchQuery);
 
+  // Products that need validation
   const candidates = products.filter(
     p => p.status === "NEW" || p.status === "NEEDS_REVIEW"
   );
+
+  // 🔍 Search filtering for cards
+  const filtered = candidates.filter(p => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(q) ||
+      p.sku.toLowerCase().includes(q) ||
+      (p.category || "").toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q)
+    );
+  });
 
   const handleLocationToggle = (product: Product, location: LocationId) => {
     const updatedLocations = product.locations.map(loc =>
@@ -28,17 +42,22 @@ export const MainValidationView: React.FC = () => {
   };
 
   return (
-    <div className="sheet-container">
+    <div className="sheet-container fade-in">
       <div className="sheet-name">Main (Validation workflow)</div>
-      {candidates.length === 0 ? (
+
+      {filtered.length === 0 ? (
         <div className="empty-state">
           <CheckCircle2 />
-          <p>All products are validated. Nice work!</p>
+          <p>
+            {candidates.length === 0
+              ? "All products are validated."
+              : "No matching products found."}
+          </p>
         </div>
       ) : (
-        <div className="card-grid">
-          {candidates.map(p => (
-            <div key={p.id} className="card">
+        <div className="card-grid fade-in">
+          {filtered.map(p => (
+            <div key={p.id} className="card fade-in-row">
               <div className="card-header">
                 <div className="card-title">{p.name}</div>
                 <div className="card-subtitle">{p.sku}</div>
@@ -52,6 +71,7 @@ export const MainValidationView: React.FC = () => {
                     updateField(p.id, "description", e.target.value)
                   }
                 />
+
                 <label className="field-label">Category</label>
                 <input
                   className="cell-input"
@@ -60,6 +80,7 @@ export const MainValidationView: React.FC = () => {
                     updateField(p.id, "category", e.target.value)
                   }
                 />
+
                 <label className="field-label">
                   Locations & stock split (simple v0.1)
                 </label>
@@ -80,6 +101,7 @@ export const MainValidationView: React.FC = () => {
                     </label>
                   ))}
                 </div>
+
                 <label className="field-label">Notes</label>
                 <textarea
                   className="cell-input cell-input-multiline"
@@ -89,6 +111,7 @@ export const MainValidationView: React.FC = () => {
                   }
                 />
               </div>
+
               <div className="card-footer">
                 <button
                   className="btn-primary"
@@ -96,6 +119,7 @@ export const MainValidationView: React.FC = () => {
                 >
                   Mark as validated
                 </button>
+
                 {p.missingFields.length > 0 && (
                   <div className="missing-chip">
                     Missing: {p.missingFields.join(", ")}
@@ -109,3 +133,4 @@ export const MainValidationView: React.FC = () => {
     </div>
   );
 };
+
