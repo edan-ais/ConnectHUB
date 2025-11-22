@@ -9,7 +9,8 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   background: #f3f4f6;
   color: #111827;
   -webkit-font-smoothing: antialiased;
@@ -74,7 +75,7 @@ body {
   font-size: 12px;
 }
 
-/* Global search bar (only here, not in filters) */
+/* Global search bar */
 .topbar-search {
   display: flex;
   align-items: center;
@@ -101,7 +102,7 @@ body {
 
 
 /* ============================================================
-   PILLS (for Approved / Needs Approval cards, etc.)
+   PILLS (Approved / Needs Approval, etc.)
    ============================================================ */
 .pill {
   display: inline-flex;
@@ -134,20 +135,20 @@ body {
 
 
 /* ============================================================
-   APP CONTENT AREA
+   APP CONTENT
    ============================================================ */
 .app-content {
   flex: 1;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding-bottom: 60px; /* bottom tabbar space */
+  padding-bottom: 60px; /* space for bottom tab bar */
 }
 
 
 
 /* ============================================================
-   BOTTOM TABBAR (mobile-like)
+   BOTTOM TAB BAR (mobile-style)
    ============================================================ */
 .tabbar-bottom {
   position: fixed;
@@ -249,6 +250,8 @@ body {
   font-size: 14px;
   line-height: 1.35;
   background-clip: padding-box;
+  white-space: normal;       /* allow wrapping */
+  word-break: break-word;
 }
 
 /* Header cells */
@@ -261,27 +264,75 @@ body {
   vertical-align: top;
 }
 
-/* Prevent truncation of header text */
-.no-shorten th {
-  white-space: nowrap;
-}
-
 /* Group header row */
 .header-group-row th {
-  background: #e5e7eb;
   font-size: 12px;
   text-align: center;
   border-bottom: 2px solid #9ca3af;
 }
 
+/* Group header base */
 .header-group-cell {
   padding: 6px 10px;
+}
+
+/* Soft colors per group section */
+.header-group-core {
+  background: #dbeafe; /* soft blue */
+}
+
+.header-group-inventory {
+  background: #dcfce7; /* soft green */
+}
+
+.header-group-classification {
+  background: #ede9fe; /* soft purple */
+}
+
+.header-group-variants {
+  background: #fef9c3; /* soft yellow */
+}
+
+.header-group-shopify {
+  background: #ffedd5; /* soft orange */
+}
+
+.header-group-pricing-accounts {
+  background: #fee2e2; /* soft red */
+}
+
+.header-group-tax-weight {
+  background: #e0f2fe; /* soft sky */
+}
+
+.header-group-fulfillment {
+  background: #ccfbf1; /* soft teal */
+}
+
+.header-group-stock-alerts {
+  background: #fef3c7; /* soft amber */
+}
+
+.header-group-quantities {
+  background: #e5e7eb; /* neutral */
+}
+
+.header-group-identifiers {
+  background: #fce7f3; /* soft pink */
+}
+
+.header-group-integrations-seo {
+  background: #e0e7ff; /* soft indigo */
+}
+
+.header-group-lifecycle {
+  background: #e5e7eb; /* neutral */
 }
 
 
 
 /* ============================================================
-   HEADER CELL WRAPPER
+   HEADER CELL + FILTER BUTTON
    ============================================================ */
 .header-cell {
   display: flex;
@@ -296,11 +347,7 @@ body {
   font-weight: 600;
 }
 
-
-
-/* ============================================================
-   FILTER BUTTON + MENU
-   ============================================================ */
+/* Filter button */
 .filter-button {
   background: transparent;
   border: none;
@@ -324,7 +371,11 @@ body {
   color: #2563eb;
 }
 
-/* Dropdown */
+
+
+/* ============================================================
+   FILTER DROPDOWN MENU
+   ============================================================ */
 .filter-menu {
   position: absolute;
   top: calc(100% + 4px);
@@ -444,21 +495,10 @@ body {
 
 
 /* ============================================================
-   COLUMN RESIZE HANDLE
+   STICKY COLUMNS / ROWS
    ============================================================ */
-.col-resize-handle {
-  position: absolute;
-  right: -3px;
-  top: 0;
-  bottom: 0;
-  width: 6px;
-  cursor: col-resize;
-  z-index: 5;
-}
-
-.col-resize-handle:hover {
-  background: rgba(59, 130, 246, 0.35);
-}
+/* Only Status + Product Name cells and the Core group header
+   are sticky via inline styles. No generic class needed. */
 
 
 
@@ -511,7 +551,7 @@ body {
 
 
 /* ============================================================
-   SIMPLE CARD GRID (for Approved / Needs Approval summary)
+   CARD GRID (for Approved / Needs Approval summary)
    ============================================================ */
 .card-grid {
   padding: 10px;
