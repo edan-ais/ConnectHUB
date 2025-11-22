@@ -23,7 +23,6 @@ body {
 }
 
 
-
 /* ============================================================
    TOP BAR
    ============================================================ */
@@ -75,7 +74,7 @@ body {
   font-size: 12px;
 }
 
-/* Global search bar */
+/* Global search bar (only in topbar) */
 .topbar-search {
   display: flex;
   align-items: center;
@@ -100,9 +99,8 @@ body {
 }
 
 
-
 /* ============================================================
-   PILLS (Approved / Needs Approval, etc.)
+   PILLS (Approved / Needs Approval cards, etc.)
    ============================================================ */
 .pill {
   display: inline-flex;
@@ -133,7 +131,6 @@ body {
 }
 
 
-
 /* ============================================================
    APP CONTENT
    ============================================================ */
@@ -146,9 +143,8 @@ body {
 }
 
 
-
 /* ============================================================
-   BOTTOM TAB BAR (mobile-style)
+   BOTTOM TABBAR (mobile-style)
    ============================================================ */
 .tabbar-bottom {
   position: fixed;
@@ -190,7 +186,6 @@ body {
 }
 
 
-
 /* ============================================================
    SHEET CONTAINER + TITLE
    ============================================================ */
@@ -213,7 +208,6 @@ body {
 }
 
 
-
 /* ============================================================
    SHEET TABLE WRAPPER
    ============================================================ */
@@ -230,7 +224,6 @@ body {
   overflow-y: auto;
   max-width: 100%;
 }
-
 
 
 /* ============================================================
@@ -250,11 +243,11 @@ body {
   font-size: 14px;
   line-height: 1.35;
   background-clip: padding-box;
-  white-space: normal;       /* allow wrapping */
+  white-space: normal;   /* allow wrapping */
   word-break: break-word;
 }
 
-/* Header cells */
+/* Column header row */
 .sheet-table th {
   background: #f3f4f6;
   font-weight: 600;
@@ -264,19 +257,19 @@ body {
   vertical-align: top;
 }
 
-/* Group header row */
+/* Group header row (secondary headers like Core, Inventory, etc.) */
 .header-group-row th {
   font-size: 12px;
   text-align: center;
   border-bottom: 2px solid #9ca3af;
 }
 
-/* Group header base */
+/* Base styling for group header cells */
 .header-group-cell {
   padding: 6px 10px;
 }
 
-/* Soft colors per group section */
+/* Color-coded group headers */
 .header-group-core {
   background: #dbeafe; /* soft blue */
 }
@@ -330,7 +323,6 @@ body {
 }
 
 
-
 /* ============================================================
    HEADER CELL + FILTER BUTTON
    ============================================================ */
@@ -370,7 +362,6 @@ body {
   background: rgba(59, 130, 246, 0.18);
   color: #2563eb;
 }
-
 
 
 /* ============================================================
@@ -493,13 +484,11 @@ body {
 }
 
 
-
 /* ============================================================
-   STICKY COLUMNS / ROWS
+   STICKY COLUMNS / GROUP HEADER (Core only)
    ============================================================ */
-/* Only Status + Product Name cells and the Core group header
-   are sticky via inline styles. No generic class needed. */
-
+/* Status + Product Name cells use inline sticky styles from TSX.
+   The Core group header cell is also made sticky via inline style. */
 
 
 /* ============================================================
@@ -537,7 +526,6 @@ body {
 }
 
 
-
 /* ============================================================
    EMPTY STATE
    ============================================================ */
@@ -549,9 +537,8 @@ body {
 }
 
 
-
 /* ============================================================
-   CARD GRID (for Approved / Needs Approval summary)
+   CARD GRID (for summary cards, Approved / Needs Approval)
    ============================================================ */
 .card-grid {
   padding: 10px;
@@ -597,6 +584,88 @@ body {
 }
 
 
+/* ============================================================
+   INTAKE FORM (kept from original)
+   ============================================================ */
+.intake-form {
+  padding: 8px;
+  background: white;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.intake-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.intake-grid label {
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.intake-span-2 {
+  grid-column: span 2;
+}
+
+.intake-footer {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+
+/* ============================================================
+   REPORTS (kept from original)
+   ============================================================ */
+.report-grid {
+  padding: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.report-card {
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  padding: 8px;
+  min-width: 120px;
+}
+
+.report-label {
+  font-size: 11px;
+  color: #4b5563;
+}
+
+.report-value {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn-primary {
+  border: none;
+  border-radius: 4px;
+  background: #16a34a;
+  color: white;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #15803d;
+}
+
 
 /* ============================================================
    ANIMATIONS
@@ -609,6 +678,17 @@ body {
   from {
     opacity: 0;
     transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dropdown-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
