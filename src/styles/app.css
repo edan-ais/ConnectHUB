@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { Search, RefreshCw, Package, FileText, ClipboardList, BarChart3, Plus, Check, AlertTriangle, X } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Search, RefreshCw, Package, FileText, ClipboardList, BarChart3, Plus, Check, AlertTriangle, X, Filter } from 'lucide-react';
 
-// Sample data
 const initialProducts = [
   { id: 1, sku: 'SKU-001', name: 'Organic Green Tea', category: 'Beverages', price: 12.99, stock: 150, status: 'approved', image: null, description: 'Premium organic green tea leaves', locations: ['Warehouse A', 'Store 1'] },
   { id: 2, sku: 'SKU-002', name: 'Almond Butter', category: 'Spreads', price: 8.49, stock: 0, status: 'missing', image: null, description: '', locations: [] },
@@ -11,397 +10,148 @@ const initialProducts = [
 ];
 
 const styles = `
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f3f4f6;
-  color: #111827;
-}
-
-.app-root {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background: #111827;
-  color: #f9fafb;
-  gap: 12px;
-}
-
-.topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.topbar-title {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.topbar-center {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex: 1;
-}
-
-.topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 4px;
-  border: 1px solid rgba(249, 250, 251, 0.25);
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.topbar-search {
-  display: flex;
-  align-items: center;
-  border-radius: 999px;
-  background: #1f2937;
-  border: 1px solid #374151;
-  padding: 2px 8px;
-  gap: 6px;
-}
-
-.topbar-search-input {
-  border: none;
-  outline: none;
-  background: transparent;
-  color: #f9fafb;
-  font-size: 12px;
-  width: 160px;
-}
-
-.topbar-search-input::placeholder {
-  color: #9ca3af;
-}
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: 999px;
-  padding: 2px 10px;
-  font-size: 11px;
-  border: 1px solid transparent;
-}
-
+*,*::before,*::after { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f4f6; color: #111827; }
+.app-root { display: flex; flex-direction: column; height: 100vh; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #111827; color: #f9fafb; gap: 12px; }
+.topbar-left { display: flex; align-items: center; gap: 8px; }
+.topbar-title { font-size: 14px; font-weight: 600; }
+.topbar-center { display: flex; gap: 8px; justify-content: center; flex: 1; }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.btn-ghost { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(249, 250, 251, 0.25); background: transparent; color: inherit; cursor: pointer; font-size: 12px; }
+.topbar-search { display: flex; align-items: center; border-radius: 999px; background: #1f2937; border: 1px solid #374151; padding: 2px 8px; gap: 6px; }
+.topbar-search-input { border: none; outline: none; background: transparent; color: #f9fafb; font-size: 12px; width: 160px; }
+.topbar-search-input::placeholder { color: #9ca3af; }
+.pill { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 10px; font-size: 11px; border: 1px solid transparent; }
 .pill-green { background: #dcfce7; color: #166534; border-color: #22c55e; }
 .pill-yellow { background: #fef9c3; color: #854d0e; border-color: #eab308; }
 .pill-red { background: #fee2e2; color: #b91c1c; border-color: #ef4444; }
+.app-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 56px; }
+.tabbar-bottom { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 8px 8px; background: #111827; border-top: 1px solid #374151; display: flex; justify-content: space-around; z-index: 10; }
+.tabbar-item { flex: 1; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 999px; padding: 4px 4px; font-size: 10px; border: none; background: transparent; color: #9ca3af; cursor: pointer; }
+.tabbar-item-active { background: #f9fafb; color: #111827; }
+.sheet-container { display: flex; flex-direction: column; height: 100%; }
+.sheet-name { padding: 6px 12px; font-size: 12px; font-weight: 600; border-bottom: 1px solid #d1d5db; background: #e5e7eb; }
+.sheet-table-wrapper { flex: 1; overflow: auto; background: white; }
+.sheet-table { border-collapse: collapse; width: 100%; min-width: 1000px; table-layout: fixed; }
+.sheet-table th, .sheet-table td { border: 1px solid #d1d5db; padding: 4px 6px; font-size: 12px; }
+.sheet-table th { background: #f3f4f6; font-weight: 600; text-align: left; }
+.master-row.row-status-approved { background: #dcfce7; }
+.master-row.row-status-pending { background: #fef9c3; }
+.master-row.row-status-missing { background: #fee2e2; }
+.sheet-table-master .col-sticky { position: sticky; left: 0; z-index: 3; background: inherit; }
+.sheet-table-master .col-sticky + .col-sticky { left: 140px; }
+.cell-wrap { white-space: normal; word-break: break-word; }
+.mini-image { width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #d1d5db; background: #e5e7eb; }
+.header-group-row th { text-align: center; font-size: 11px; background: #e5e7eb; }
+.sheet-table-master th { resize: horizontal; overflow: auto; }
+.cell-input { width: 100%; border: none; outline: none; font-size: 12px; font-family: inherit; padding: 2px 4px; background: transparent; }
+.cell-input:focus { outline: 1px solid #3b82f6; background: #eff6ff; }
+.cell-number { text-align: right; }
+.card-grid { padding: 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; overflow: auto; }
+.card { background: white; border-radius: 6px; border: 1px solid #d1d5db; display: flex; flex-direction: column; }
+.card-header { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
+.card-title { font-size: 13px; font-weight: 600; }
+.card-subtitle { font-size: 11px; color: #6b7280; }
+.card-body { padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+.field-label { font-size: 11px; color: #4b5563; }
+.card-footer { padding: 6px 8px; border-top: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+.btn-primary { border: none; border-radius: 4px; background: #16a34a; color: white; font-size: 12px; padding: 4px 10px; cursor: pointer; }
+.btn-primary:hover { background: #15803d; }
+.intake-form { padding: 8px; background: white; height: 100%; display: flex; flex-direction: column; }
+.intake-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.intake-grid label { font-size: 11px; display: flex; flex-direction: column; gap: 3px; }
+.intake-span-2 { grid-column: span 2; }
+.intake-footer { margin-top: 8px; display: flex; align-items: center; gap: 10px; }
+.report-grid { padding: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+.report-card { background: white; border-radius: 6px; border: 1px solid #d1d5db; padding: 8px; min-width: 120px; }
+.report-label { font-size: 11px; color: #4b5563; }
+.report-value { font-size: 16px; font-weight: 600; }
+.fade-in { animation: fadein 0.25s ease-in; }
+@keyframes fadein { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
 
-.app-content {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 56px;
-}
-
-.tabbar-bottom {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 6px 8px 8px;
-  background: #111827;
-  border-top: 1px solid #374151;
-  display: flex;
-  justify-content: space-around;
-  z-index: 10;
-}
-
-.tabbar-item {
-  flex: 1;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  border-radius: 999px;
-  padding: 4px 4px;
-  font-size: 10px;
-  border: none;
-  background: transparent;
-  color: #9ca3af;
-  cursor: pointer;
-}
-
-.tabbar-item-active {
-  background: #f9fafb;
-  color: #111827;
-}
-
-.sheet-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.sheet-name {
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  border-bottom: 1px solid #d1d5db;
-  background: #e5e7eb;
-}
-
-.sheet-table-wrapper {
-  flex: 1;
-  overflow: auto;
-  background: white;
-}
-
-.sheet-table {
-  border-collapse: collapse;
-  width: 100%;
-  min-width: 1000px;
-  table-layout: fixed;
-}
-
-.sheet-table th,
-.sheet-table td {
-  border: 1px solid #d1d5db;
-  padding: 4px 6px;
-  font-size: 12px;
-}
-
-.sheet-table th {
-  background: #f3f4f6;
-  font-weight: 600;
-  text-align: left;
-}
-
-/* Master row color states */
-.master-row.row-status-approved {
-  background: #dcfce7;
-}
-.master-row.row-status-pending {
-  background: #fef9c3;
-}
-.master-row.row-status-missing {
-  background: #fee2e2;
-}
-
-.sheet-table-master .col-sticky {
-  position: sticky;
-  left: 0;
-  z-index: 3;
-  background: inherit;
-}
-.sheet-table-master .col-sticky + .col-sticky {
-  left: 140px;
-}
-
-.cell-wrap {
-  white-space: normal;
-  word-break: break-word;
-}
-
-.mini-image {
-  width: 32px;
-  height: 32px;
-  object-fit: cover;
-  border-radius: 4px;
-  border: 1px solid #d1d5db;
-  background: #e5e7eb;
-}
-
-.header-group-row th {
-  text-align: center;
-  font-size: 11px;
-  background: #e5e7eb;
-}
-
-.sheet-table-master th {
-  resize: horizontal;
-  overflow: auto;
-}
-
-.cell-input {
-  width: 100%;
-  border: none;
-  outline: none;
-  font-size: 12px;
-  font-family: inherit;
-  padding: 2px 4px;
-  background: transparent;
-}
-
-.cell-input:focus {
-  outline: 1px solid #3b82f6;
-  background: #eff6ff;
-}
-
-.cell-number {
-  text-align: right;
-}
-
-.card-grid {
-  padding: 8px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 8px;
-  overflow: auto;
-}
-
-.card {
-  background: white;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  display: flex;
-  flex-direction: column;
-}
-
-.card-header {
-  padding: 6px 8px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.card-title {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.card-subtitle {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.card-body {
-  padding: 6px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.field-label {
-  font-size: 11px;
-  color: #4b5563;
-}
-
-.card-footer {
-  padding: 6px 8px;
-  border-top: 1px solid #e5e7eb;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.btn-primary {
-  border: none;
-  border-radius: 4px;
-  background: #16a34a;
-  color: white;
-  font-size: 12px;
-  padding: 4px 10px;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  background: #15803d;
-}
-
-.intake-form {
-  padding: 8px;
-  background: white;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.intake-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.intake-grid label {
-  font-size: 11px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.intake-span-2 {
-  grid-column: span 2;
-}
-
-.intake-footer {
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.report-grid {
-  padding: 10px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.report-card {
-  background: white;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  padding: 8px;
-  min-width: 120px;
-}
-
-.report-label {
-  font-size: 11px;
-  color: #4b5563;
-}
-
-.report-value {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.fade-in {
-  animation: fadein 0.25s ease-in;
-}
-
-@keyframes fadein {
-  from { opacity: 0; transform: translateY(3px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+/* Prevent header text shortening */
+.no-shorten th { white-space: nowrap; }
+/* Horizontal scroll */
+.wide-scroll { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+/* Filter button */
+.filter-button { margin-left: 6px; background: transparent; border: none; cursor: pointer; padding: 0; color: #6b7280; }
+.filter-button:hover { color: #111827; }
+.filter-button.active { color: #3b82f6; }
+/* Dropdown menu */
+.filter-menu { position: absolute; background: white; border: 1px solid #ccc; z-index: 50; min-width: 180px; padding: 8px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.filter-section { margin-bottom: 8px; }
+.filter-divider { border-bottom: 1px solid #ccc; margin: 6px 0; }
+.filter-search-input { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; }
+.filter-value-list { max-height: 150px; overflow-y: auto; }
+.filter-checkbox-row { display: flex; gap: 6px; margin: 4px 0; align-items: center; font-size: 11px; }
+.filter-checkbox-row input { margin: 0; }
+.th-content { display: flex; align-items: center; justify-content: space-between; }
 `;
+
+function FilterDropdown({ column, values, activeFilters, onFilterChange, onClose }) {
+  const [search, setSearch] = useState('');
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) onClose();
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  const filtered = values.filter(v => String(v).toLowerCase().includes(search.toLowerCase()));
+  const selected = activeFilters[column] || [];
+
+  const toggle = (val) => {
+    const newSelected = selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val];
+    onFilterChange(column, newSelected);
+  };
+
+  const selectAll = () => onFilterChange(column, [...values]);
+  const clearAll = () => onFilterChange(column, []);
+
+  return (
+    <div className="filter-menu" ref={menuRef}>
+      <div className="filter-section">
+        <input type="text" className="filter-search-input" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} />
+      </div>
+      <div className="filter-divider" />
+      <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+        <button onClick={selectAll} style={{ fontSize: 10, padding: '2px 6px', cursor: 'pointer' }}>All</button>
+        <button onClick={clearAll} style={{ fontSize: 10, padding: '2px 6px', cursor: 'pointer' }}>Clear</button>
+      </div>
+      <div className="filter-value-list">
+        {filtered.map(val => (
+          <label key={val} className="filter-checkbox-row">
+            <input type="checkbox" checked={selected.includes(val)} onChange={() => toggle(val)} />
+            {val}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function ProductValidationApp() {
   const [activeTab, setActiveTab] = useState('master');
   const [products, setProducts] = useState(initialProducts);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState({});
+  const [openFilter, setOpenFilter] = useState(null);
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.sku.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const getUniqueValues = (field) => [...new Set(products.map(p => p[field]))];
+
+  const handleFilterChange = (col, vals) => {
+    setFilters(prev => ({ ...prev, [col]: vals }));
+  };
+
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilters = Object.entries(filters).every(([col, vals]) => vals.length === 0 || vals.includes(p[col]));
+    return matchesSearch && matchesFilters;
+  });
 
   const stats = {
     total: products.length,
@@ -410,16 +160,8 @@ export default function ProductValidationApp() {
     missing: products.filter(p => p.status === 'missing').length,
   };
 
-  const updateProduct = (id, field, value) => {
-    setProducts(prev => prev.map(p => 
-      p.id === id ? { ...p, [field]: value } : p
-    ));
-  };
-
-  const approveProduct = (id) => {
-    updateProduct(id, 'status', 'approved');
-  };
-
+  const updateProduct = (id, field, value) => setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+  const approveProduct = (id) => updateProduct(id, 'status', 'approved');
   const getStatusIcon = (status) => {
     switch(status) {
       case 'approved': return <Check size={12} />;
@@ -429,47 +171,45 @@ export default function ProductValidationApp() {
     }
   };
 
+  const columns = [
+    { key: 'sku', label: 'SKU', width: 140, sticky: true, filterable: true },
+    { key: 'name', label: 'Name', width: 140, sticky: true, filterable: false },
+    { key: 'category', label: 'Category', width: 100, filterable: true },
+    { key: 'image', label: 'Image', width: 60, filterable: false },
+    { key: 'description', label: 'Description', width: 200, filterable: false },
+    { key: 'price', label: 'Price', width: 80, filterable: false },
+    { key: 'stock', label: 'Stock', width: 80, filterable: false },
+    { key: 'status', label: 'Status', width: 100, filterable: true },
+  ];
+
   return (
     <>
       <style>{styles}</style>
       <div className="app-root">
-        {/* Topbar */}
         <div className="topbar">
           <div className="topbar-left">
             <Package size={20} />
             <span className="topbar-title">Product Validation</span>
           </div>
-          
           <div className="topbar-center">
             <span className="pill pill-green">{stats.approved} Approved</span>
             <span className="pill pill-yellow">{stats.pending} Pending</span>
             <span className="pill pill-red">{stats.missing} Missing</span>
           </div>
-          
           <div className="topbar-right">
             <div className="topbar-search">
               <Search size={14} style={{ opacity: 0.7 }} />
-              <input 
-                type="text" 
-                className="topbar-search-input" 
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <input type="text" className="topbar-search-input" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
-            <button className="btn-ghost">
-              <RefreshCw size={14} />
-              Sync
-            </button>
+            <button className="btn-ghost"><RefreshCw size={14} />Sync</button>
           </div>
         </div>
 
-        {/* Content */}
         <div className="app-content">
           {activeTab === 'master' && (
             <div className="sheet-container fade-in">
               <div className="sheet-name">Master Product List</div>
-              <div className="sheet-table-wrapper">
+              <div className="sheet-table-wrapper wide-scroll">
                 <table className="sheet-table sheet-table-master">
                   <thead>
                     <tr className="header-group-row">
@@ -478,92 +218,39 @@ export default function ProductValidationApp() {
                       <th colSpan={2}>Inventory</th>
                       <th>Status</th>
                     </tr>
-                    <tr>
-                      <th style={{ width: 140 }} className="col-sticky">SKU</th>
-                      <th style={{ width: 140 }} className="col-sticky">Name</th>
-                      <th style={{ width: 100 }}>Category</th>
-                      <th style={{ width: 60 }}>Image</th>
-                      <th style={{ width: 200 }}>Description</th>
-                      <th style={{ width: 80 }}>Price</th>
-                      <th style={{ width: 80 }}>Stock</th>
-                      <th style={{ width: 100 }}>Status</th>
+                    <tr className="no-shorten">
+                      {columns.map((col, i) => (
+                        <th key={col.key} style={{ width: col.width, position: 'relative' }} className={col.sticky ? 'col-sticky' : ''}>
+                          <div className="th-content">
+                            <span>{col.label}</span>
+                            {col.filterable && (
+                              <button className={`filter-button ${filters[col.key]?.length ? 'active' : ''}`} onClick={() => setOpenFilter(openFilter === col.key ? null : col.key)}>
+                                <Filter size={12} />
+                              </button>
+                            )}
+                          </div>
+                          {openFilter === col.key && (
+                            <FilterDropdown column={col.key} values={getUniqueValues(col.key)} activeFilters={filters} onFilterChange={handleFilterChange} onClose={() => setOpenFilter(null)} />
+                          )}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {filteredProducts.map(product => (
-                      <tr 
-                        key={product.id} 
-                        className={`master-row row-status-${product.status}`}
-                      >
+                      <tr key={product.id} className={`master-row row-status-${product.status}`}>
                         <td className="col-sticky" style={{ background: 'inherit' }}>
-                          <input 
-                            type="text" 
-                            className="cell-input" 
-                            value={product.sku}
-                            onChange={(e) => updateProduct(product.id, 'sku', e.target.value)}
-                          />
+                          <input type="text" className="cell-input" value={product.sku} onChange={(e) => updateProduct(product.id, 'sku', e.target.value)} />
                         </td>
                         <td className="col-sticky" style={{ background: 'inherit' }}>
-                          <input 
-                            type="text" 
-                            className="cell-input" 
-                            value={product.name}
-                            onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
-                          />
+                          <input type="text" className="cell-input" value={product.name} onChange={(e) => updateProduct(product.id, 'name', e.target.value)} />
                         </td>
-                        <td>
-                          <input 
-                            type="text" 
-                            className="cell-input" 
-                            value={product.category}
-                            onChange={(e) => updateProduct(product.id, 'category', e.target.value)}
-                          />
-                        </td>
-                        <td>
-                          {product.image ? (
-                            <img src={product.image} alt="" className="mini-image" />
-                          ) : (
-                            <div className="mini-image" style={{ 
-                              background: 'repeating-linear-gradient(-45deg, #e5e7eb, #e5e7eb 4px, #f9fafb 4px, #f9fafb 8px)' 
-                            }} />
-                          )}
-                        </td>
-                        <td className="cell-wrap">
-                          <input 
-                            type="text" 
-                            className="cell-input" 
-                            value={product.description}
-                            onChange={(e) => updateProduct(product.id, 'description', e.target.value)}
-                            placeholder="Add description..."
-                          />
-                        </td>
-                        <td>
-                          <input 
-                            type="number" 
-                            className="cell-input cell-number" 
-                            value={product.price}
-                            onChange={(e) => updateProduct(product.id, 'price', parseFloat(e.target.value) || 0)}
-                          />
-                        </td>
-                        <td>
-                          <input 
-                            type="number" 
-                            className="cell-input cell-number" 
-                            value={product.stock}
-                            onChange={(e) => updateProduct(product.id, 'stock', parseInt(e.target.value) || 0)}
-                          />
-                        </td>
-                        <td>
-                          <select 
-                            className="cell-input"
-                            value={product.status}
-                            onChange={(e) => updateProduct(product.id, 'status', e.target.value)}
-                          >
-                            <option value="approved">Approved</option>
-                            <option value="pending">Pending</option>
-                            <option value="missing">Missing</option>
-                          </select>
-                        </td>
+                        <td><input type="text" className="cell-input" value={product.category} onChange={(e) => updateProduct(product.id, 'category', e.target.value)} /></td>
+                        <td>{product.image ? <img src={product.image} alt="" className="mini-image" /> : <div className="mini-image" style={{ background: 'repeating-linear-gradient(-45deg, #e5e7eb, #e5e7eb 4px, #f9fafb 4px, #f9fafb 8px)' }} />}</td>
+                        <td className="cell-wrap"><input type="text" className="cell-input" value={product.description} onChange={(e) => updateProduct(product.id, 'description', e.target.value)} placeholder="Add description..." /></td>
+                        <td><input type="number" className="cell-input cell-number" value={product.price} onChange={(e) => updateProduct(product.id, 'price', parseFloat(e.target.value) || 0)} /></td>
+                        <td><input type="number" className="cell-input cell-number" value={product.stock} onChange={(e) => updateProduct(product.id, 'stock', parseInt(e.target.value) || 0)} /></td>
+                        <td><select className="cell-input" value={product.status} onChange={(e) => updateProduct(product.id, 'status', e.target.value)}><option value="approved">Approved</option><option value="pending">Pending</option><option value="missing">Missing</option></select></td>
                       </tr>
                     ))}
                   </tbody>
@@ -576,27 +263,16 @@ export default function ProductValidationApp() {
             <div className="card-grid fade-in">
               {filteredProducts.filter(p => p.status !== 'approved').map(product => (
                 <div key={product.id} className="card">
-                  <div className="card-header">
-                    <div className="card-title">{product.name}</div>
-                    <div className="card-subtitle">{product.sku} • {product.category}</div>
-                  </div>
+                  <div className="card-header"><div className="card-title">{product.name}</div><div className="card-subtitle">{product.sku} • {product.category}</div></div>
                   <div className="card-body">
                     <div className="field-label">Description</div>
                     <div style={{ fontSize: 12 }}>{product.description || 'No description'}</div>
                     <div className="field-label" style={{ marginTop: 4 }}>Locations ({product.locations.length})</div>
-                    <div style={{ fontSize: 12 }}>
-                      {product.locations.length > 0 ? product.locations.join(', ') : 'No locations assigned'}
-                    </div>
+                    <div style={{ fontSize: 12 }}>{product.locations.length > 0 ? product.locations.join(', ') : 'No locations assigned'}</div>
                   </div>
                   <div className="card-footer">
-                    <span className={`pill pill-${product.status === 'pending' ? 'yellow' : 'red'}`}>
-                      {getStatusIcon(product.status)}
-                      {product.status}
-                    </span>
-                    <button className="btn-primary" onClick={() => approveProduct(product.id)}>
-                      <Check size={12} style={{ marginRight: 4 }} />
-                      Approve
-                    </button>
+                    <span className={`pill pill-${product.status === 'pending' ? 'yellow' : 'red'}`}>{getStatusIcon(product.status)}{product.status}</span>
+                    <button className="btn-primary" onClick={() => approveProduct(product.id)}><Check size={12} style={{ marginRight: 4 }} />Approve</button>
                   </div>
                 </div>
               ))}
@@ -607,100 +283,37 @@ export default function ProductValidationApp() {
             <div className="intake-form fade-in">
               <h3 style={{ margin: '0 0 8px', fontSize: 14 }}>Add New Product</h3>
               <div className="intake-grid">
-                <label>
-                  SKU
-                  <input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
-                </label>
-                <label>
-                  Product Name
-                  <input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
-                </label>
-                <label>
-                  Category
-                  <input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
-                </label>
-                <label>
-                  Price
-                  <input type="number" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
-                </label>
-                <label className="intake-span-2">
-                  Description
-                  <textarea className="cell-input" rows={3} style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
-                </label>
+                <label>SKU<input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} /></label>
+                <label>Product Name<input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} /></label>
+                <label>Category<input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} /></label>
+                <label>Price<input type="number" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} /></label>
+                <label className="intake-span-2">Description<textarea className="cell-input" rows={3} style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} /></label>
               </div>
-              <div className="intake-footer">
-                <button className="btn-primary">
-                  <Plus size={12} style={{ marginRight: 4 }} />
-                  Add Product
-                </button>
-                <span className="intake-hint">Product will be added with "Pending" status</span>
-              </div>
+              <div className="intake-footer"><button className="btn-primary"><Plus size={12} style={{ marginRight: 4 }} />Add Product</button><span style={{ fontSize: 11, color: '#6b7280' }}>Product will be added with "Pending" status</span></div>
             </div>
           )}
 
           {activeTab === 'reports' && (
             <div className="fade-in">
               <div className="report-grid">
-                <div className="report-card">
-                  <div className="report-label">Total Products</div>
-                  <div className="report-value">{stats.total}</div>
-                </div>
-                <div className="report-card">
-                  <div className="report-label">Approved</div>
-                  <div className="report-value" style={{ color: '#16a34a' }}>{stats.approved}</div>
-                </div>
-                <div className="report-card">
-                  <div className="report-label">Pending Review</div>
-                  <div className="report-value" style={{ color: '#ca8a04' }}>{stats.pending}</div>
-                </div>
-                <div className="report-card">
-                  <div className="report-label">Missing Data</div>
-                  <div className="report-value" style={{ color: '#dc2626' }}>{stats.missing}</div>
-                </div>
-                <div className="report-card">
-                  <div className="report-label">Completion Rate</div>
-                  <div className="report-value">{Math.round((stats.approved / stats.total) * 100)}%</div>
-                </div>
+                <div className="report-card"><div className="report-label">Total Products</div><div className="report-value">{stats.total}</div></div>
+                <div className="report-card"><div className="report-label">Approved</div><div className="report-value" style={{ color: '#16a34a' }}>{stats.approved}</div></div>
+                <div className="report-card"><div className="report-label">Pending Review</div><div className="report-value" style={{ color: '#ca8a04' }}>{stats.pending}</div></div>
+                <div className="report-card"><div className="report-label">Missing Data</div><div className="report-value" style={{ color: '#dc2626' }}>{stats.missing}</div></div>
+                <div className="report-card"><div className="report-label">Completion Rate</div><div className="report-value">{Math.round((stats.approved / stats.total) * 100)}%</div></div>
               </div>
-              <div style={{ padding: '0 10px', fontSize: 11, color: '#6b7280' }}>
-                Last synced: Today at 2:34 PM
-              </div>
+              <div style={{ padding: '0 10px', fontSize: 11, color: '#6b7280' }}>Last synced: Today at 2:34 PM</div>
             </div>
           )}
         </div>
 
-        {/* Bottom Tabbar */}
         <div className="tabbar-bottom">
-          <button 
-            className={`tabbar-item ${activeTab === 'master' ? 'tabbar-item-active' : ''}`}
-            onClick={() => setActiveTab('master')}
-          >
-            <FileText size={18} />
-            Master
-          </button>
-          <button 
-            className={`tabbar-item ${activeTab === 'validate' ? 'tabbar-item-active' : ''}`}
-            onClick={() => setActiveTab('validate')}
-          >
-            <ClipboardList size={18} />
-            Validate
-          </button>
-          <button 
-            className={`tabbar-item ${activeTab === 'intake' ? 'tabbar-item-active' : ''}`}
-            onClick={() => setActiveTab('intake')}
-          >
-            <Plus size={18} />
-            Intake
-          </button>
-          <button 
-            className={`tabbar-item ${activeTab === 'reports' ? 'tabbar-item-active' : ''}`}
-            onClick={() => setActiveTab('reports')}
-          >
-            <BarChart3 size={18} />
-            Reports
-          </button>
+          <button className={`tabbar-item ${activeTab === 'master' ? 'tabbar-item-active' : ''}`} onClick={() => setActiveTab('master')}><FileText size={18} />Master</button>
+          <button className={`tabbar-item ${activeTab === 'validate' ? 'tabbar-item-active' : ''}`} onClick={() => setActiveTab('validate')}><ClipboardList size={18} />Validate</button>
+          <button className={`tabbar-item ${activeTab === 'intake' ? 'tabbar-item-active' : ''}`} onClick={() => setActiveTab('intake')}><Plus size={18} />Intake</button>
+          <button className={`tabbar-item ${activeTab === 'reports' ? 'tabbar-item-active' : ''}`} onClick={() => setActiveTab('reports')}><BarChart3 size={18} />Reports</button>
         </div>
       </div>
     </>
   );
-}
+}        
