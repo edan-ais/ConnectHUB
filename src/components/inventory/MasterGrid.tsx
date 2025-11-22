@@ -1,13 +1,11 @@
-import React, { useMemo, useState, useRef, useEffect } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import { useMasterInventory } from "../../hooks/useMasterInventory";
 import { ChevronDown } from "lucide-react";
 import "../../styles/app.css";
 
-/**
- * -----------------------------
- * COLUMN FILTER DROPDOWN
- * -----------------------------
- */
+/* -------------------------------------- */
+/* COLUMN FILTER DROPDOWN MENU            */
+/* -------------------------------------- */
 const ColumnFilterMenu = ({
   values,
   activeValues,
@@ -29,11 +27,11 @@ const ColumnFilterMenu = ({
     v.toLowerCase().includes(search.toLowerCase())
   );
 
-  const toggleValue = (value: string) => {
-    if (activeValues.includes(value)) {
-      setValues(activeValues.filter(v => v !== value));
+  const toggleValue = (v: string) => {
+    if (activeValues.includes(v)) {
+      setValues(activeValues.filter(x => x !== v));
     } else {
-      setValues([...activeValues, value]);
+      setValues([...activeValues, v]);
     }
   };
 
@@ -55,14 +53,14 @@ const ColumnFilterMenu = ({
       />
 
       <div className="filter-value-list">
-        {filteredValues.map(v => (
-          <label key={v} className="filter-checkbox-row">
+        {filteredValues.map(val => (
+          <label key={val} className="filter-checkbox-row">
             <input
               type="checkbox"
-              checked={activeValues.includes(v)}
-              onChange={() => toggleValue(v)}
+              checked={activeValues.includes(val)}
+              onChange={() => toggleValue(val)}
             />
-            {v || "(blank)"}
+            {val || "(blank)"}
           </label>
         ))}
       </div>
@@ -70,12 +68,13 @@ const ColumnFilterMenu = ({
   );
 };
 
-/**
- * -----------------------------
- * MASTER GRID
- * -----------------------------
- */
+/* -------------------------------------- */
+/* MASTER GRID                            */
+/* -------------------------------------- */
 export const MasterGrid: React.FC = () => {
+  /* -------------------------------------- */
+  /* 1. ALL HOOKS AT THE TOP (React Rules)   */
+  /* -------------------------------------- */
   const { rows, loading, error } = useMasterInventory();
 
   const [sort, setSort] = useState<{ col: string; dir: "asc" | "desc" | null }>({
@@ -83,41 +82,16 @@ export const MasterGrid: React.FC = () => {
     dir: null
   });
 
-  // Column filters: { colName: [allowedValues] }
   const [filters, setFilters] = useState<Record<string, string[]>>({});
-
-  // Which column menu is open
   const [openCol, setOpenCol] = useState<string | null>(null);
 
-  // Column widths
+  // column widths + refs (must be before returns)
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
-
-  // Column refs for auto-resize
   const colRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
 
-  if (loading) {
-    return (
-      <div className="sheet-container">
-        <div className="sheet-name">Master (loading…)</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="sheet-container">
-        <div className="sheet-name">Master (error)</div>
-        {error}
-      </div>
-    );
-  }
-
-  /**
-   * -----------------------------
-   * DEFINE COLUMNS
-   * -----------------------------
-   * (All columns get filters)
-   */
+  /* -------------------------------------- */
+  /* 2. COLUMN DEFINITIONS                  */
+  /* -------------------------------------- */
   const columns = [
     { key: "status", label: "Status", sticky: true },
     { key: "product_name", label: "Product Name", sticky: true },
@@ -233,24 +207,23 @@ export const MasterGrid: React.FC = () => {
     { key: "last_synced_booker", label: "Synced Booker" }
   ];
 
-  /**
-   * -----------------------------
-   * PROCESS ROWS: FILTER + SORT
-   * -----------------------------
-   */
+  /* -------------------------------------- */
+  /* 3. useMemo — Filter + Sort BEFORE returns */
+  /* -------------------------------------- */
   const processed = useMemo(() => {
     let data = [...rows];
 
-    // FILTERING
+    // Filtering
     for (const col of Object.keys(filters)) {
       const allowed = filters[col];
-      if (!allowed.length) continue;
-      data = data.filter(r =>
-        allowed.includes(String((r as any)[col] ?? ""))
-      );
+      if (allowed.length > 0) {
+        data = data.filter(row =>
+          allowed.includes(String((row as any)[col] ?? ""))
+        );
+      }
     }
 
-    // SORT
+    // Sorting
     if (sort.col && sort.dir) {
       data.sort((a, b) => {
         const A = String((a as any)[sort.col] ?? "").toLowerCase();
@@ -264,49 +237,52 @@ export const MasterGrid: React.FC = () => {
     return data;
   }, [rows, filters, sort]);
 
-  /**
-   * ----------------------------------------
-   * COLUMN RESIZE (drag + double-click)
-   * ----------------------------------------
-   */
+  /* -------------------------------------- */
+  /* 4. Helpers BEFORE conditional returns   */
+  /* -------------------------------------- */
+
+  // Drag-to-resize
   const startResize = (colKey: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     const startX = e.clientX;
-    const startWidth = colWidths[colKey] || colRefs.current[colKey]?.offsetWidth || 120;
+    const startWidth =
+      colWidths[colKey] ||
+      colRefs.current[colKey]?.offsetWidth ||
+      120;
 
-    const handleMouseMove = (ev: MouseEvent) => {
-      const diff = ev.clientX - startX;
-      const newWidth = Math.max(60, startWidth + diff);
+    const handleMove = (ev: MouseEvent) => {
+      const newWidth = Math.max(60, startWidth + (ev.clientX - startX));
       setColWidths(w => ({ ...w, [colKey]: newWidth }));
     };
 
-    const handleMouseUp = () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+    const handleUp = () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
   };
 
+  // Auto-fit to longest content
   const autoFitColumn = (colKey: string) => {
-    // header width
     const header = colRefs.current[colKey];
     if (!header) return;
 
+    // Base width: header width
     let maxWidth = header.scrollWidth + 30;
 
-    // scan rows
+    // Scan rows
     for (const row of processed) {
-      const value = String((row as any)[colKey] ?? "");
+      const val = String((row as any)[colKey] ?? "");
       const span = document.createElement("span");
       span.style.visibility = "hidden";
       span.style.position = "absolute";
       span.style.fontSize = "14px";
       span.style.padding = "4px 6px";
-      span.innerText = value;
+      span.innerText = val;
       document.body.appendChild(span);
       maxWidth = Math.max(maxWidth, span.offsetWidth + 20);
       document.body.removeChild(span);
@@ -315,11 +291,29 @@ export const MasterGrid: React.FC = () => {
     setColWidths(w => ({ ...w, [colKey]: Math.min(maxWidth, 800) }));
   };
 
-  /**
-   * -----------------------------
-   * RENDER
-   * -----------------------------
-   */
+  /* -------------------------------------- */
+  /* 5. CONDITIONAL RETURNS AFTER HOOKS     */
+  /* -------------------------------------- */
+  if (loading) {
+    return (
+      <div className="sheet-container">
+        <div className="sheet-name">Master (loading…)</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="sheet-container">
+        <div className="sheet-name">Master (error)</div>
+        {error}
+      </div>
+    );
+  }
+
+  /* -------------------------------------- */
+  /* 6. MAIN RENDER                         */
+  /* -------------------------------------- */
   return (
     <div className="sheet-container fade-in">
       <div className="sheet-name">Master (Source of Truth · read-only)</div>
@@ -340,7 +334,6 @@ export const MasterGrid: React.FC = () => {
                   >
                     <div className="header-cell">
                       <span>{col.label}</span>
-
                       <button
                         className="filter-button"
                         onClick={e => {
@@ -351,13 +344,14 @@ export const MasterGrid: React.FC = () => {
                         <ChevronDown size={14} />
                       </button>
 
-                      {/* Resize handle */}
+                      {/* resize handle */}
                       <div
                         className="col-resize-handle"
                         onMouseDown={e => startResize(col.key, e)}
                         onDoubleClick={() => autoFitColumn(col.key)}
                       />
 
+                      {/* dropdown */}
                       {openCol === col.key && (
                         <ColumnFilterMenu
                           values={[
@@ -369,7 +363,10 @@ export const MasterGrid: React.FC = () => {
                           ]}
                           activeValues={filters[col.key] || []}
                           setValues={vals =>
-                            setFilters(prev => ({ ...prev, [col.key]: vals }))
+                            setFilters(prev => ({
+                              ...prev,
+                              [col.key]: vals
+                            }))
                           }
                           sortAsc={() => {
                             setSort({ col: col.key, dir: "asc" });
@@ -396,29 +393,23 @@ export const MasterGrid: React.FC = () => {
             {processed.map(row => (
               <tr key={row.id}>
                 {columns.map(col => {
-                  let value = (row as any)[col.key];
+                  const value = (row as any)[col.key];
                   const sticky = col.sticky ? "col-sticky" : "";
 
                   if (typeof value === "boolean") {
-                    value = value ? "Yes" : "";
+                    return <td className={sticky}>{value ? "Yes" : ""}</td>;
                   }
 
                   if (col.key === "image_url" || col.key === "variant_image_url") {
                     return (
-                      <td key={col.key} className={sticky}>
-                        {value ? (
-                          <img src={value} alt="" className="mini-image" />
-                        ) : (
-                          ""
-                        )}
+                      <td className={sticky}>
+                        {value ? <img alt="" src={value} className="mini-image" /> : ""}
                       </td>
                     );
                   }
 
                   return (
-                    <td key={col.key} className={sticky}>
-                      {String(value ?? "")}
-                    </td>
+                    <td className={sticky}>{String(value ?? "")}</td>
                   );
                 })}
               </tr>
