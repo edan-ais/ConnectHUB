@@ -21,6 +21,22 @@ const statusColor = (status: Product["status"]) => {
 export const MasterGrid: React.FC = () => {
   const products = useInventoryStore(s => s.products);
   const updateField = useInventoryStore(s => s.updateProductField);
+  const searchQuery = useInventoryStore(s => s.searchQuery);
+
+  // 🔍 Live search filter
+  const filteredProducts = products.filter(p => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+
+    return (
+      p.name.toLowerCase().includes(q) ||
+      p.sku.toLowerCase().includes(q) ||
+      (p.vendorName || "").toLowerCase().includes(q) ||
+      (p.category || "").toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q) ||
+      p.tags.some(t => t.toLowerCase().includes(q))
+    );
+  });
 
   const handleChange =
     (id: string, field: keyof Product) =>
@@ -30,7 +46,7 @@ export const MasterGrid: React.FC = () => {
     };
 
   return (
-    <div className="sheet-container">
+    <div className="sheet-container fade-in">
       <div className="sheet-name">Master (Source of Truth)</div>
       <div className="sheet-table-wrapper">
         <table className="sheet-table">
@@ -51,12 +67,12 @@ export const MasterGrid: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {products.map(p => (
+            {filteredProducts.map(p => (
               <tr
                 key={p.id}
                 className={`row-status-${p.status.toLowerCase()} ${
                   p.missingFields.length > 0 ? "row-missing" : ""
-                }`}
+                } fade-in-row`}
               >
                 <td className="col-sticky">
                   <Pill color={statusColor(p.status)}>
@@ -139,9 +155,18 @@ export const MasterGrid: React.FC = () => {
                 </td>
               </tr>
             ))}
+
+            {filteredProducts.length === 0 && (
+              <tr>
+                <td colSpan={12} style={{ textAlign: "center", padding: "20px" }}>
+                  No products match your search.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
     </div>
   );
 };
+
