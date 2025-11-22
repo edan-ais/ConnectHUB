@@ -1,100 +1,91 @@
-import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState } from "react";
 import { useMasterInventory } from "../../hooks/useMasterInventory";
 import { ChevronDown } from "lucide-react";
 import "../../styles/app.css";
 
-/* -------------------------------------- */
-/* COLUMN FILTER DROPDOWN MENU            */
-/* -------------------------------------- */
-const ColumnFilterMenu = ({
-  values,
-  activeValues,
-  setValues,
-  sortAsc,
-  sortDesc,
-  clearSort
-}: {
+/**
+ * Simple Excel-style filter menu:
+ * - Sort A→Z
+ * - Sort Z→A
+ * - Clear sort
+ * - Unique value checkboxes
+ * (No search input inside the menu)
+ */
+interface ColumnFilterMenuProps {
   values: string[];
   activeValues: string[];
   setValues: (vals: string[]) => void;
   sortAsc: () => void;
   sortDesc: () => void;
   clearSort: () => void;
+}
+
+const ColumnFilterMenu: React.FC<ColumnFilterMenuProps> = ({
+  values,
+  activeValues,
+  setValues,
+  sortAsc,
+  sortDesc,
+  clearSort
 }) => {
-  const [search, setSearch] = useState("");
-
-  const filteredValues = values.filter(v =>
-    v.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const toggleValue = (v: string) => {
-    if (activeValues.includes(v)) {
-      setValues(activeValues.filter(x => x !== v));
+  const toggle = (val: string) => {
+    if (activeValues.includes(val)) {
+      setValues(activeValues.filter(v => v !== val));
     } else {
-      setValues([...activeValues, v]);
+      setValues([...activeValues, val]);
     }
   };
 
   return (
     <div className="filter-menu">
-      <div className="filter-section">
+      <div className="filter-section filter-section-actions">
         <button onClick={sortAsc}>Sort A → Z</button>
         <button onClick={sortDesc}>Sort Z → A</button>
-        <button onClick={clearSort}>Clear Sort</button>
+        <button onClick={clearSort}>Clear sort</button>
       </div>
 
       <div className="filter-divider" />
 
-      <input
-        className="filter-search-input"
-        placeholder="Search values…"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-      />
-
-      <div className="filter-value-list">
-        {filteredValues.map(val => (
-          <label key={val} className="filter-checkbox-row">
-            <input
-              type="checkbox"
-              checked={activeValues.includes(val)}
-              onChange={() => toggleValue(val)}
-            />
-            {val || "(blank)"}
-          </label>
-        ))}
+      <div className="filter-section filter-section-values">
+        <div className="filter-value-list">
+          {values.map(v => (
+            <label key={v || "(blank)"} className="filter-checkbox-row">
+              <input
+                type="checkbox"
+                checked={activeValues.includes(v)}
+                onChange={() => toggle(v)}
+              />
+              {v || "(blank)"}
+            </label>
+          ))}
+        </div>
       </div>
     </div>
   );
 };
 
-/* -------------------------------------- */
-/* MASTER GRID                            */
-/* -------------------------------------- */
+/**
+ * MASTER GRID
+ * - Read-only
+ * - Every column has a filter
+ * - No internal search bars
+ * - No column stretching UI
+ * - Larger fonts / cells via CSS classes
+ */
 export const MasterGrid: React.FC = () => {
-  /* -------------------------------------- */
-  /* 1. ALL HOOKS AT THE TOP (React Rules)   */
-  /* -------------------------------------- */
+  // Hooks FIRST (React rules)
   const { rows, loading, error } = useMasterInventory();
 
-  const [sort, setSort] = useState<{ col: string; dir: "asc" | "desc" | null }>({
-    col: "",
-    dir: null
-  });
-
+  const [sort, setSort] = useState<{ col: string; dir: "asc" | "desc" | null }>(
+    { col: "", dir: null }
+  );
   const [filters, setFilters] = useState<Record<string, string[]>>({});
   const [openCol, setOpenCol] = useState<string | null>(null);
 
-  // column widths + refs (must be before returns)
-  const [colWidths, setColWidths] = useState<Record<string, number>>({});
-  const colRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
-
-  /* -------------------------------------- */
-  /* 2. COLUMN DEFINITIONS                  */
-  /* -------------------------------------- */
-  const columns = [
-    { key: "status", label: "Status", sticky: true },
-    { key: "product_name", label: "Product Name", sticky: true },
+  // Column definitions
+  const columns: { key: string; label: string; sticky?: "status" | "product" }[] = [
+    { key: "status", label: "Status", sticky: "status" },
+    { key: "product_name", label: "Product Name", sticky: "product" },
     { key: "sku", label: "SKU" },
     { key: "vendor", label: "Vendor" },
 
@@ -207,23 +198,20 @@ export const MasterGrid: React.FC = () => {
     { key: "last_synced_booker", label: "Synced Booker" }
   ];
 
-  /* -------------------------------------- */
-  /* 3. useMemo — Filter + Sort BEFORE returns */
-  /* -------------------------------------- */
+  // Filter + sort logic (computed before renders)
   const processed = useMemo(() => {
     let data = [...rows];
 
-    // Filtering
+    // Filters: per-column unique value checks
     for (const col of Object.keys(filters)) {
       const allowed = filters[col];
-      if (allowed.length > 0) {
-        data = data.filter(row =>
-          allowed.includes(String((row as any)[col] ?? ""))
-        );
-      }
+      if (!allowed.length) continue;
+      data = data.filter(row =>
+        allowed.includes(String((row as any)[col] ?? ""))
+      );
     }
 
-    // Sorting
+    // Sort
     if (sort.col && sort.dir) {
       data.sort((a, b) => {
         const A = String((a as any)[sort.col] ?? "").toLowerCase();
@@ -237,67 +225,12 @@ export const MasterGrid: React.FC = () => {
     return data;
   }, [rows, filters, sort]);
 
-  /* -------------------------------------- */
-  /* 4. Helpers BEFORE conditional returns   */
-  /* -------------------------------------- */
-
-  // Drag-to-resize
-  const startResize = (colKey: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const startX = e.clientX;
-    const startWidth =
-      colWidths[colKey] ||
-      colRefs.current[colKey]?.offsetWidth ||
-      120;
-
-    const handleMove = (ev: MouseEvent) => {
-      const newWidth = Math.max(60, startWidth + (ev.clientX - startX));
-      setColWidths(w => ({ ...w, [colKey]: newWidth }));
-    };
-
-    const handleUp = () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("mouseup", handleUp);
-    };
-
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleUp);
-  };
-
-  // Auto-fit to longest content
-  const autoFitColumn = (colKey: string) => {
-    const header = colRefs.current[colKey];
-    if (!header) return;
-
-    // Base width: header width
-    let maxWidth = header.scrollWidth + 30;
-
-    // Scan rows
-    for (const row of processed) {
-      const val = String((row as any)[colKey] ?? "");
-      const span = document.createElement("span");
-      span.style.visibility = "hidden";
-      span.style.position = "absolute";
-      span.style.fontSize = "14px";
-      span.style.padding = "4px 6px";
-      span.innerText = val;
-      document.body.appendChild(span);
-      maxWidth = Math.max(maxWidth, span.offsetWidth + 20);
-      document.body.removeChild(span);
-    }
-
-    setColWidths(w => ({ ...w, [colKey]: Math.min(maxWidth, 800) }));
-  };
-
-  /* -------------------------------------- */
-  /* 5. CONDITIONAL RETURNS AFTER HOOKS     */
-  /* -------------------------------------- */
+  // Loading / error states
   if (loading) {
     return (
       <div className="sheet-container">
         <div className="sheet-name">Master (loading…)</div>
+        <div className="empty-state">Loading Master inventory…</div>
       </div>
     );
   }
@@ -306,34 +239,40 @@ export const MasterGrid: React.FC = () => {
     return (
       <div className="sheet-container">
         <div className="sheet-name">Master (error)</div>
-        {error}
+        <div className="empty-state">Error: {error}</div>
       </div>
     );
   }
 
-  /* -------------------------------------- */
-  /* 6. MAIN RENDER                         */
-  /* -------------------------------------- */
+  // Render
   return (
     <div className="sheet-container fade-in">
-      <div className="sheet-name">Master (Source of Truth · read-only)</div>
+      <div className="sheet-name large-sheet-name">
+        Master (Source of Truth · read-only)
+      </div>
 
       <div className="sheet-table-wrapper wide-scroll">
-        <table className="sheet-table no-shorten">
+        <table className="sheet-table sheet-table-master no-shorten large-grid">
           <thead>
             <tr>
               {columns.map(col => {
-                const width = colWidths[col.key] || "auto";
+                const stickyClass =
+                  col.sticky === "status"
+                    ? "sticky-col-status"
+                    : col.sticky === "product"
+                    ? "sticky-col-product"
+                    : "";
+
+                const uniqueValues = Array.from(
+                  new Set(
+                    rows.map(r => String((r as any)[col.key] ?? ""))
+                  )
+                ).sort((a, b) => a.localeCompare(b));
 
                 return (
-                  <th
-                    key={col.key}
-                    ref={el => (colRefs.current[col.key] = el)}
-                    className={col.sticky ? "col-sticky" : ""}
-                    style={{ width }}
-                  >
+                  <th key={col.key} className={stickyClass}>
                     <div className="header-cell">
-                      <span>{col.label}</span>
+                      <span className="header-label">{col.label}</span>
                       <button
                         className="filter-button"
                         onClick={e => {
@@ -341,26 +280,12 @@ export const MasterGrid: React.FC = () => {
                           setOpenCol(openCol === col.key ? null : col.key);
                         }}
                       >
-                        <ChevronDown size={14} />
+                        <ChevronDown size={16} />
                       </button>
 
-                      {/* resize handle */}
-                      <div
-                        className="col-resize-handle"
-                        onMouseDown={e => startResize(col.key, e)}
-                        onDoubleClick={() => autoFitColumn(col.key)}
-                      />
-
-                      {/* dropdown */}
                       {openCol === col.key && (
                         <ColumnFilterMenu
-                          values={[
-                            ...new Set(
-                              rows.map(r =>
-                                String((r as any)[col.key] ?? "")
-                              )
-                            )
-                          ]}
+                          values={uniqueValues}
                           activeValues={filters[col.key] || []}
                           setValues={vals =>
                             setFilters(prev => ({
@@ -391,25 +316,43 @@ export const MasterGrid: React.FC = () => {
 
           <tbody>
             {processed.map(row => (
-              <tr key={row.id}>
+              <tr key={row.id} className="master-row">
                 {columns.map(col => {
-                  const value = (row as any)[col.key];
-                  const sticky = col.sticky ? "col-sticky" : "";
+                  const stickyClass =
+                    col.sticky === "status"
+                      ? "sticky-col-status"
+                      : col.sticky === "product"
+                      ? "sticky-col-product"
+                      : "";
 
+                  let value = (row as any)[col.key];
+
+                  // Boolean fields → "Yes" / blank
                   if (typeof value === "boolean") {
-                    return <td className={sticky}>{value ? "Yes" : ""}</td>;
+                    value = value ? "Yes" : "";
                   }
 
+                  // Images
                   if (col.key === "image_url" || col.key === "variant_image_url") {
                     return (
-                      <td className={sticky}>
-                        {value ? <img alt="" src={value} className="mini-image" /> : ""}
+                      <td key={col.key} className={stickyClass}>
+                        {value ? (
+                          <img
+                            src={String(value)}
+                            alt=""
+                            className="mini-image large-mini-image"
+                          />
+                        ) : (
+                          ""
+                        )}
                       </td>
                     );
                   }
 
                   return (
-                    <td className={sticky}>{String(value ?? "")}</td>
+                    <td key={col.key} className={stickyClass}>
+                      {String(value ?? "")}
+                    </td>
                   );
                 })}
               </tr>
