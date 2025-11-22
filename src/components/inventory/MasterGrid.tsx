@@ -15,7 +15,7 @@ type ColumnDef = {
   key: string;
   label: string;
   group: string;
-  sticky?: boolean; // for Status / Product Name
+  sticky?: boolean; // Status + Product Name
   isImage?: boolean;
 };
 
@@ -29,6 +29,9 @@ interface ColumnFilterMenuProps {
   close: () => void;
 }
 
+/**
+ * Excel-style column filter dropdown (no search input).
+ */
 const ColumnFilterMenu: React.FC<ColumnFilterMenuProps> = ({
   values,
   activeValues,
@@ -74,8 +77,7 @@ const ColumnFilterMenu: React.FC<ColumnFilterMenuProps> = ({
           Close
         </button>
         <button className="filter-action-btn primary" onClick={close}>
-          Apply
-        </button>
+          Apply</button>
       </div>
     </div>
   );
@@ -88,25 +90,22 @@ export const MasterGrid: React.FC = () => {
   const [filters, setFilters] = useState<Record<string, string[]>>({});
   const [openCol, setOpenCol] = useState<string | null>(null);
 
-  // For outside click to close filter
   const containerRef = useRef<HTMLDivElement | null>(null);
   const colRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
-
-  // Status width so Product name and Core header can stick properly, no weird gap
   const [statusWidth, setStatusWidth] = useState<number>(180);
 
-  // Column definitions
+  // --- COLUMN DEFINITIONS (Product Name is SECOND column) ---
   const columns: ColumnDef[] = [
-    // Core
-    { key: "status", label: "Status", group: "Core", sticky: true },
+    // CORE
+    { key: "status", label: "Status", group: "Core", sticky: true }, // col 1
     {
       key: "product_name",
       label: "Product Name",
       group: "Core",
       sticky: true,
-    },
+    }, // col 2
 
-    // Inventory
+    // INVENTORY
     { key: "sku", label: "SKU", group: "Inventory" },
     { key: "vendor", label: "Vendor", group: "Inventory" },
     {
@@ -152,7 +151,7 @@ export const MasterGrid: React.FC = () => {
     },
     { key: "reorder_point", label: "Reorder Point", group: "Inventory" },
 
-    // Classification
+    // CLASSIFICATION
     { key: "product_type", label: "Product Type", group: "Classification" },
     {
       key: "product_category",
@@ -178,7 +177,7 @@ export const MasterGrid: React.FC = () => {
     },
     { key: "tags", label: "Tags", group: "Classification" },
 
-    // Variants
+    // VARIANTS
     {
       key: "single_parent_or_variant",
       label: "Single Parent or Variant",
@@ -195,7 +194,7 @@ export const MasterGrid: React.FC = () => {
     { key: "option4_name", label: "Option 4 Name", group: "Variants" },
     { key: "option4_value", label: "Option 4 Value", group: "Variants" },
 
-    // Shopify
+    // SHOPIFY
     { key: "handle", label: "Shopify Handle", group: "Shopify" },
     { key: "permalink", label: "Shopify Permalink", group: "Shopify" },
     {
@@ -212,7 +211,7 @@ export const MasterGrid: React.FC = () => {
     },
     { key: "square_image_id", label: "Square Image ID", group: "Shopify" },
 
-    // Pricing & Accounts
+    // PRICING & ACCOUNTS
     { key: "price", label: "Base Price", group: "Pricing & Accounts" },
     { key: "online_price", label: "Online Price", group: "Pricing & Accounts" },
     { key: "cost", label: "Cost", group: "Pricing & Accounts" },
@@ -238,7 +237,7 @@ export const MasterGrid: React.FC = () => {
       group: "Pricing & Accounts",
     },
 
-    // Tax & Weight
+    // TAX & WEIGHT
     { key: "sales_tax_rate", label: "Sales Tax Rate", group: "Tax & Weight" },
     { key: "tax_code", label: "Tax Code", group: "Tax & Weight" },
     { key: "taxable", label: "Taxable?", group: "Tax & Weight" },
@@ -249,7 +248,7 @@ export const MasterGrid: React.FC = () => {
     },
     { key: "weight_lb", label: "Weight (lb)", group: "Tax & Weight" },
 
-    // Fulfillment
+    // FULFILLMENT
     {
       key: "shipping_enabled",
       label: "Shipping Enabled",
@@ -267,7 +266,7 @@ export const MasterGrid: React.FC = () => {
     },
     { key: "pickup_enabled", label: "Pickup Enabled", group: "Fulfillment" },
 
-    // Stock Alerts
+    // STOCK ALERTS
     {
       key: "stock_alert_enabled_cc",
       label: "Stock Alert – Coastal Cowgirl",
@@ -299,7 +298,7 @@ export const MasterGrid: React.FC = () => {
       group: "Stock Alerts",
     },
 
-    // Quantities snapshot
+    // QUANTITIES SNAPSHOT
     {
       key: "total_quantity",
       label: "Total Quantity (Snapshot)",
@@ -326,7 +325,7 @@ export const MasterGrid: React.FC = () => {
       group: "Quantities",
     },
 
-    // Identifiers
+    // IDENTIFIERS
     { key: "parent_sku", label: "Parent SKU", group: "Identifiers" },
     { key: "barcode", label: "Barcode", group: "Identifiers" },
     { key: "gtin", label: "GTIN", group: "Identifiers" },
@@ -344,7 +343,7 @@ export const MasterGrid: React.FC = () => {
       group: "Identifiers",
     },
 
-    // Integrations / SEO
+    // INTEGRATIONS / SEO
     {
       key: "shopify_product_id",
       label: "Shopify Product ID",
@@ -380,7 +379,7 @@ export const MasterGrid: React.FC = () => {
       group: "Integrations / SEO",
     },
 
-    // Lifecycle
+    // LIFECYCLE
     { key: "archived", label: "Archived?", group: "Lifecycle" },
     { key: "archive_reason", label: "Archive Reason", group: "Lifecycle" },
     {
@@ -419,7 +418,7 @@ export const MasterGrid: React.FC = () => {
 
   const uniqueGroups = Object.keys(groupSpans);
 
-  // Outside click to close filters
+  // Close filter when clicking outside
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (!containerRef.current) return;
@@ -431,7 +430,7 @@ export const MasterGrid: React.FC = () => {
     return () => window.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Measure status column width once to align sticky Product Name + Core header
+  // Measure Status column width once we have rows, to align Product Name sticky left
   useEffect(() => {
     const el = colRefs.current["status"];
     if (el) {
@@ -464,7 +463,7 @@ export const MasterGrid: React.FC = () => {
     return data;
   }, [rows, filters, sort]);
 
-  // Sticky style for Status / Product
+  // Sticky style for Status / Product cells
   const getStickyStyle = (col: ColumnDef): React.CSSProperties => {
     if (!col.sticky) return {};
     if (col.key === "status") {
@@ -513,19 +512,20 @@ export const MasterGrid: React.FC = () => {
       <div className="sheet-table-wrapper wide-scroll">
         <table className="sheet-table sheet-table-master">
           <thead>
-            {/* Group header row */}
+            {/* GROUP HEADER ROW (secondary headers, color-coded) */}
             <tr className="header-group-row">
               {uniqueGroups.map((group) => {
                 const span = groupSpans[group];
                 const slug = group.toLowerCase().replace(/[^a-z0-9]+/g, "-");
                 const isCore = group === "Core";
 
+                // ONLY Core header cell is sticky on the left
                 const style: React.CSSProperties = isCore
                   ? {
                       position: "sticky",
                       left: 0,
                       zIndex: 11,
-                      background: "#dbeafe", // same as CSS core color
+                      background: "#dbeafe",
                     }
                   : {};
 
@@ -542,7 +542,7 @@ export const MasterGrid: React.FC = () => {
               })}
             </tr>
 
-            {/* Column header row */}
+            {/* COLUMN HEADERS (each with filter) */}
             <tr>
               {columns.map((col) => {
                 const stickyStyle = getStickyStyle(col);
