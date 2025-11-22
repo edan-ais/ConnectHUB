@@ -1,3 +1,16 @@
+import React, { useState } from 'react';
+import { Search, RefreshCw, Package, FileText, ClipboardList, BarChart3, Plus, Check, AlertTriangle, X } from 'lucide-react';
+
+// Sample data
+const initialProducts = [
+  { id: 1, sku: 'SKU-001', name: 'Organic Green Tea', category: 'Beverages', price: 12.99, stock: 150, status: 'approved', image: null, description: 'Premium organic green tea leaves', locations: ['Warehouse A', 'Store 1'] },
+  { id: 2, sku: 'SKU-002', name: 'Almond Butter', category: 'Spreads', price: 8.49, stock: 0, status: 'missing', image: null, description: '', locations: [] },
+  { id: 3, sku: 'SKU-003', name: 'Quinoa Crackers', category: 'Snacks', price: 5.99, stock: 45, status: 'pending', image: null, description: 'Gluten-free quinoa crackers', locations: ['Warehouse B'] },
+  { id: 4, sku: 'SKU-004', name: 'Coconut Oil', category: 'Oils', price: 14.99, stock: 200, status: 'approved', image: null, description: 'Cold-pressed virgin coconut oil', locations: ['Warehouse A', 'Store 2', 'Store 3'] },
+  { id: 5, sku: 'SKU-005', name: 'Oat Milk', category: 'Beverages', price: 4.99, stock: 12, status: 'pending', image: null, description: 'Unsweetened oat milk', locations: ['Store 1'] },
+];
+
+const styles = `
 *,
 *::before,
 *::after {
@@ -6,8 +19,7 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #f3f4f6;
   color: #111827;
 }
@@ -17,8 +29,6 @@ body {
   flex-direction: column;
   height: 100vh;
 }
-
-/* Topbar */
 
 .topbar {
   display: flex;
@@ -36,17 +46,10 @@ body {
   gap: 8px;
 }
 
-.topbar-icon {
-  width: 24px;
-  height: 24px;
-}
-
 .topbar-title {
   font-size: 14px;
   font-weight: 600;
 }
-
-/* Center pills */
 
 .topbar-center {
   display: flex;
@@ -54,8 +57,6 @@ body {
   justify-content: center;
   flex: 1;
 }
-
-/* Right side: search + sync */
 
 .topbar-right {
   display: flex;
@@ -76,8 +77,6 @@ body {
   font-size: 12px;
 }
 
-/* Search */
-
 .topbar-search {
   display: flex;
   align-items: center;
@@ -86,13 +85,6 @@ body {
   border: 1px solid #374151;
   padding: 2px 8px;
   gap: 6px;
-}
-
-.topbar-search-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.7;
 }
 
 .topbar-search-input {
@@ -108,8 +100,6 @@ body {
   color: #9ca3af;
 }
 
-/* Pills */
-
 .pill {
   display: inline-flex;
   align-items: center;
@@ -120,52 +110,16 @@ body {
   border: 1px solid transparent;
 }
 
-.pill-green {
-  background: #dcfce7;
-  color: #166534;
-  border-color: #22c55e;
-}
-
-.pill-yellow {
-  background: #fef9c3;
-  color: #854d0e;
-  border-color: #eab308;
-}
-
-.pill-red {
-  background: #fee2e2;
-  color: #b91c1c;
-  border-color: #ef4444;
-}
-
-.pill-gray {
-  background: #e5e7eb;
-  color: #374151;
-  border-color: #9ca3af;
-}
-
-.pill-blue {
-  background: #dbeafe;
-  color: #1d4ed8;
-  border-color: #3b82f6;
-}
-
-/* App content */
+.pill-green { background: #dcfce7; color: #166534; border-color: #22c55e; }
+.pill-yellow { background: #fef9c3; color: #854d0e; border-color: #eab308; }
+.pill-red { background: #fee2e2; color: #b91c1c; border-color: #ef4444; }
 
 .app-content {
   flex: 1;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  /* make room for bottom nav */
   padding-bottom: 56px;
-}
-
-/* Bottom tabbar (mobile-style nav) */
-
-.tabbar {
-  display: flex;
-  gap: 4px;
 }
 
 .tabbar-bottom {
@@ -176,6 +130,7 @@ body {
   padding: 6px 8px 8px;
   background: #111827;
   border-top: 1px solid #374151;
+  display: flex;
   justify-content: space-around;
   z-index: 10;
 }
@@ -201,8 +156,6 @@ body {
   color: #111827;
 }
 
-/* Sheet container */
-
 .sheet-container {
   display: flex;
   flex-direction: column;
@@ -216,8 +169,6 @@ body {
   border-bottom: 1px solid #d1d5db;
   background: #e5e7eb;
 }
-
-/* Table */
 
 .sheet-table-wrapper {
   flex: 1;
@@ -245,29 +196,51 @@ body {
   text-align: left;
 }
 
-.col-sticky {
+/* Master row color states */
+.master-row.row-status-approved {
+  background: #dcfce7;
+}
+.master-row.row-status-pending {
+  background: #fef9c3;
+}
+.master-row.row-status-missing {
+  background: #fee2e2;
+}
+
+.sheet-table-master .col-sticky {
   position: sticky;
   left: 0;
-  z-index: 2;
-  background: white;
+  z-index: 3;
+  background: inherit;
+}
+.sheet-table-master .col-sticky + .col-sticky {
+  left: 140px;
 }
 
-.col-sticky + .col-sticky {
-  left: 120px;
+.cell-wrap {
+  white-space: normal;
+  word-break: break-word;
 }
 
-/* Rows */
-
-.row-status-validated {
-  background: #f0fdf4;
+.mini-image {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  background: #e5e7eb;
 }
 
-.row-status-new.row-missing,
-.row-status-needs_review.row-missing {
-  background: #fef2f2;
+.header-group-row th {
+  text-align: center;
+  font-size: 11px;
+  background: #e5e7eb;
 }
 
-/* Inputs */
+.sheet-table-master th {
+  resize: horizontal;
+  overflow: auto;
+}
 
 .cell-input {
   width: 100%;
@@ -284,71 +257,9 @@ body {
   background: #eff6ff;
 }
 
-.cell-input-multiline {
-  resize: vertical;
-  min-height: 40px;
-}
-
 .cell-number {
   text-align: right;
 }
-
-.cell-center {
-  text-align: center;
-}
-
-/* Product preview */
-
-.product-preview-cell {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.product-preview-thumb {
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid #d1d5db;
-  background: #e5e7eb;
-  flex-shrink: 0;
-}
-
-.product-preview-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.product-preview-placeholder {
-  width: 100%;
-  height: 100%;
-  background: repeating-linear-gradient(
-    -45deg,
-    #e5e7eb,
-    #e5e7eb 4px,
-    #f9fafb 4px,
-    #f9fafb 8px
-  );
-}
-
-.product-preview-name {
-  font-size: 12px;
-}
-
-/* Missing chip */
-
-.missing-chip {
-  margin-top: 2px;
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: #fef3c7;
-  color: #92400e;
-}
-
-/* Cards (Main validation) */
 
 .card-grid {
   padding: 8px;
@@ -393,24 +304,6 @@ body {
   color: #4b5563;
 }
 
-.locations-row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.location-chip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-}
-
-.location-chip-count {
-  margin-left: auto;
-  color: #6b7280;
-}
-
 .card-footer {
   padding: 6px 8px;
   border-top: 1px solid #e5e7eb;
@@ -418,8 +311,6 @@ body {
   align-items: center;
   justify-content: space-between;
 }
-
-/* Buttons */
 
 .btn-primary {
   border: none;
@@ -434,8 +325,6 @@ body {
 .btn-primary:hover {
   background: #15803d;
 }
-
-/* Intake form */
 
 .intake-form {
   padding: 8px;
@@ -469,17 +358,11 @@ body {
   gap: 10px;
 }
 
-.intake-hint {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-/* Reports */
-
 .report-grid {
   padding: 10px;
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .report-card {
@@ -500,40 +383,324 @@ body {
   font-weight: 600;
 }
 
-.report-note {
-  padding: 0 10px 10px;
-  font-size: 11px;
-  color: #6b7280;
-}
-
-/* Empty state */
-
-.empty-state {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  color: #4b5563;
-  font-size: 13px;
-}
-
 .fade-in {
   animation: fadein 0.25s ease-in;
 }
 
-.fade-in-row {
-  animation: fadein 0.35s ease-out;
-}
-
 @keyframes fadein {
-  from {
-    opacity: 0;
-    transform: translateY(3px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+`;
+
+export default function ProductValidationApp() {
+  const [activeTab, setActiveTab] = useState('master');
+  const [products, setProducts] = useState(initialProducts);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.sku.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const stats = {
+    total: products.length,
+    approved: products.filter(p => p.status === 'approved').length,
+    pending: products.filter(p => p.status === 'pending').length,
+    missing: products.filter(p => p.status === 'missing').length,
+  };
+
+  const updateProduct = (id, field, value) => {
+    setProducts(prev => prev.map(p => 
+      p.id === id ? { ...p, [field]: value } : p
+    ));
+  };
+
+  const approveProduct = (id) => {
+    updateProduct(id, 'status', 'approved');
+  };
+
+  const getStatusIcon = (status) => {
+    switch(status) {
+      case 'approved': return <Check size={12} />;
+      case 'pending': return <AlertTriangle size={12} />;
+      case 'missing': return <X size={12} />;
+      default: return null;
+    }
+  };
+
+  return (
+    <>
+      <style>{styles}</style>
+      <div className="app-root">
+        {/* Topbar */}
+        <div className="topbar">
+          <div className="topbar-left">
+            <Package size={20} />
+            <span className="topbar-title">Product Validation</span>
+          </div>
+          
+          <div className="topbar-center">
+            <span className="pill pill-green">{stats.approved} Approved</span>
+            <span className="pill pill-yellow">{stats.pending} Pending</span>
+            <span className="pill pill-red">{stats.missing} Missing</span>
+          </div>
+          
+          <div className="topbar-right">
+            <div className="topbar-search">
+              <Search size={14} style={{ opacity: 0.7 }} />
+              <input 
+                type="text" 
+                className="topbar-search-input" 
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <button className="btn-ghost">
+              <RefreshCw size={14} />
+              Sync
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="app-content">
+          {activeTab === 'master' && (
+            <div className="sheet-container fade-in">
+              <div className="sheet-name">Master Product List</div>
+              <div className="sheet-table-wrapper">
+                <table className="sheet-table sheet-table-master">
+                  <thead>
+                    <tr className="header-group-row">
+                      <th colSpan={2}>Identity</th>
+                      <th colSpan={3}>Product Info</th>
+                      <th colSpan={2}>Inventory</th>
+                      <th>Status</th>
+                    </tr>
+                    <tr>
+                      <th style={{ width: 140 }} className="col-sticky">SKU</th>
+                      <th style={{ width: 140 }} className="col-sticky">Name</th>
+                      <th style={{ width: 100 }}>Category</th>
+                      <th style={{ width: 60 }}>Image</th>
+                      <th style={{ width: 200 }}>Description</th>
+                      <th style={{ width: 80 }}>Price</th>
+                      <th style={{ width: 80 }}>Stock</th>
+                      <th style={{ width: 100 }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map(product => (
+                      <tr 
+                        key={product.id} 
+                        className={`master-row row-status-${product.status}`}
+                      >
+                        <td className="col-sticky" style={{ background: 'inherit' }}>
+                          <input 
+                            type="text" 
+                            className="cell-input" 
+                            value={product.sku}
+                            onChange={(e) => updateProduct(product.id, 'sku', e.target.value)}
+                          />
+                        </td>
+                        <td className="col-sticky" style={{ background: 'inherit' }}>
+                          <input 
+                            type="text" 
+                            className="cell-input" 
+                            value={product.name}
+                            onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
+                          />
+                        </td>
+                        <td>
+                          <input 
+                            type="text" 
+                            className="cell-input" 
+                            value={product.category}
+                            onChange={(e) => updateProduct(product.id, 'category', e.target.value)}
+                          />
+                        </td>
+                        <td>
+                          {product.image ? (
+                            <img src={product.image} alt="" className="mini-image" />
+                          ) : (
+                            <div className="mini-image" style={{ 
+                              background: 'repeating-linear-gradient(-45deg, #e5e7eb, #e5e7eb 4px, #f9fafb 4px, #f9fafb 8px)' 
+                            }} />
+                          )}
+                        </td>
+                        <td className="cell-wrap">
+                          <input 
+                            type="text" 
+                            className="cell-input" 
+                            value={product.description}
+                            onChange={(e) => updateProduct(product.id, 'description', e.target.value)}
+                            placeholder="Add description..."
+                          />
+                        </td>
+                        <td>
+                          <input 
+                            type="number" 
+                            className="cell-input cell-number" 
+                            value={product.price}
+                            onChange={(e) => updateProduct(product.id, 'price', parseFloat(e.target.value) || 0)}
+                          />
+                        </td>
+                        <td>
+                          <input 
+                            type="number" 
+                            className="cell-input cell-number" 
+                            value={product.stock}
+                            onChange={(e) => updateProduct(product.id, 'stock', parseInt(e.target.value) || 0)}
+                          />
+                        </td>
+                        <td>
+                          <select 
+                            className="cell-input"
+                            value={product.status}
+                            onChange={(e) => updateProduct(product.id, 'status', e.target.value)}
+                          >
+                            <option value="approved">Approved</option>
+                            <option value="pending">Pending</option>
+                            <option value="missing">Missing</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'validate' && (
+            <div className="card-grid fade-in">
+              {filteredProducts.filter(p => p.status !== 'approved').map(product => (
+                <div key={product.id} className="card">
+                  <div className="card-header">
+                    <div className="card-title">{product.name}</div>
+                    <div className="card-subtitle">{product.sku} • {product.category}</div>
+                  </div>
+                  <div className="card-body">
+                    <div className="field-label">Description</div>
+                    <div style={{ fontSize: 12 }}>{product.description || 'No description'}</div>
+                    <div className="field-label" style={{ marginTop: 4 }}>Locations ({product.locations.length})</div>
+                    <div style={{ fontSize: 12 }}>
+                      {product.locations.length > 0 ? product.locations.join(', ') : 'No locations assigned'}
+                    </div>
+                  </div>
+                  <div className="card-footer">
+                    <span className={`pill pill-${product.status === 'pending' ? 'yellow' : 'red'}`}>
+                      {getStatusIcon(product.status)}
+                      {product.status}
+                    </span>
+                    <button className="btn-primary" onClick={() => approveProduct(product.id)}>
+                      <Check size={12} style={{ marginRight: 4 }} />
+                      Approve
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'intake' && (
+            <div className="intake-form fade-in">
+              <h3 style={{ margin: '0 0 8px', fontSize: 14 }}>Add New Product</h3>
+              <div className="intake-grid">
+                <label>
+                  SKU
+                  <input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
+                </label>
+                <label>
+                  Product Name
+                  <input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
+                </label>
+                <label>
+                  Category
+                  <input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
+                </label>
+                <label>
+                  Price
+                  <input type="number" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
+                </label>
+                <label className="intake-span-2">
+                  Description
+                  <textarea className="cell-input" rows={3} style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
+                </label>
+              </div>
+              <div className="intake-footer">
+                <button className="btn-primary">
+                  <Plus size={12} style={{ marginRight: 4 }} />
+                  Add Product
+                </button>
+                <span className="intake-hint">Product will be added with "Pending" status</span>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'reports' && (
+            <div className="fade-in">
+              <div className="report-grid">
+                <div className="report-card">
+                  <div className="report-label">Total Products</div>
+                  <div className="report-value">{stats.total}</div>
+                </div>
+                <div className="report-card">
+                  <div className="report-label">Approved</div>
+                  <div className="report-value" style={{ color: '#16a34a' }}>{stats.approved}</div>
+                </div>
+                <div className="report-card">
+                  <div className="report-label">Pending Review</div>
+                  <div className="report-value" style={{ color: '#ca8a04' }}>{stats.pending}</div>
+                </div>
+                <div className="report-card">
+                  <div className="report-label">Missing Data</div>
+                  <div className="report-value" style={{ color: '#dc2626' }}>{stats.missing}</div>
+                </div>
+                <div className="report-card">
+                  <div className="report-label">Completion Rate</div>
+                  <div className="report-value">{Math.round((stats.approved / stats.total) * 100)}%</div>
+                </div>
+              </div>
+              <div style={{ padding: '0 10px', fontSize: 11, color: '#6b7280' }}>
+                Last synced: Today at 2:34 PM
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom Tabbar */}
+        <div className="tabbar-bottom">
+          <button 
+            className={`tabbar-item ${activeTab === 'master' ? 'tabbar-item-active' : ''}`}
+            onClick={() => setActiveTab('master')}
+          >
+            <FileText size={18} />
+            Master
+          </button>
+          <button 
+            className={`tabbar-item ${activeTab === 'validate' ? 'tabbar-item-active' : ''}`}
+            onClick={() => setActiveTab('validate')}
+          >
+            <ClipboardList size={18} />
+            Validate
+          </button>
+          <button 
+            className={`tabbar-item ${activeTab === 'intake' ? 'tabbar-item-active' : ''}`}
+            onClick={() => setActiveTab('intake')}
+          >
+            <Plus size={18} />
+            Intake
+          </button>
+          <button 
+            className={`tabbar-item ${activeTab === 'reports' ? 'tabbar-item-active' : ''}`}
+            onClick={() => setActiveTab('reports')}
+          >
+            <BarChart3 size={18} />
+            Reports
+          </button>
+        </div>
+      </div>
+    </>
+  );
 }
