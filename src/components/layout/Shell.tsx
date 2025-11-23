@@ -2,7 +2,7 @@ import React from "react";
 import { TopBar } from "./TopBar";
 import { TabBar } from "./TabBar";
 import { useInventoryStore } from "../../state/inventoryStore";
-import { InventoryWorkspace } from "../inventory/MasterGrid";
+import InventoryWorkspace from "../inventory/MasterGrid";
 import { MainValidationView } from "../inventory/MainValidationView";
 import { IntakeForm } from "../inventory/IntakeForm";
 import { ReportsView } from "../reports/ReportsView";
