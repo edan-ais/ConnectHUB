@@ -1,664 +1,697 @@
-import React, {
-  useState,
-  useMemo,
-  useRef,
-  useEffect,
-  MouseEvent as ReactMouseEvent,
-} from "react";
-import { ChevronDown } from "lucide-react";
-import { useMasterInventory } from "../../hooks/useMasterInventory";
-import "../../styles/app.css";
-
-type SortState = { col: string; dir: "asc" | "desc" | null };
-
-type ColumnDef = {
-  key: string;
-  label: string;
-  group: string;
-  sticky?: boolean; // Status + Product Name
-  isImage?: boolean;
-};
-
-interface ColumnFilterMenuProps {
-  values: string[];
-  activeValues: string[];
-  setValues: (vals: string[]) => void;
-  sortAsc: () => void;
-  sortDesc: () => void;
-  clearSort: () => void;
-  close: () => void;
+/* ============================================================
+   GLOBAL RESET + BASE
+   ============================================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-/**
- * Excel-style column filter dropdown (no search input).
- */
-const ColumnFilterMenu: React.FC<ColumnFilterMenuProps> = ({
-  values,
-  activeValues,
-  setValues,
-  sortAsc,
-  sortDesc,
-  clearSort,
-  close,
-}) => {
-  const toggle = (val: string) => {
-    if (activeValues.includes(val)) {
-      setValues(activeValues.filter((v) => v !== val));
-    } else {
-      setValues([...activeValues, val]);
-    }
-  };
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+}
 
-  return (
-    <div className="filter-menu" onClick={(e) => e.stopPropagation()}>
-      <div className="filter-section">
-        <button onClick={sortAsc}>Sort A → Z</button>
-        <button onClick={sortDesc}>Sort Z → A</button>
-        <button onClick={clearSort}>Clear sort</button>
-      </div>
+.app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
 
-      <div className="filter-divider" />
 
-      <div className="filter-value-list">
-        {values.map((v) => (
-          <label key={v || "(blank)"} className="filter-checkbox-row">
-            <input
-              type="checkbox"
-              checked={activeValues.includes(v)}
-              onChange={() => toggle(v)}
-            />
-            {v || "(blank)"}
-          </label>
-        ))}
-      </div>
+/* ============================================================
+   TOP BAR
+   ============================================================ */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background: #111827;
+  color: #f9fafb;
+  gap: 14px;
+  border-bottom: 1px solid #1f2937;
+}
 
-      <div className="filter-actions">
-        <button className="filter-action-btn" onClick={close}>
-          Close
-        </button>
-        <button className="filter-action-btn primary" onClick={close}>
-          Apply</button>
-      </div>
-    </div>
-  );
-};
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
-export const MasterGrid: React.FC = () => {
-  const { rows, loading, error } = useMasterInventory();
+.topbar-title {
+  font-size: 15px;
+  font-weight: 600;
+}
 
-  const [sort, setSort] = useState<SortState>({ col: "", dir: null });
-  const [filters, setFilters] = useState<Record<string, string[]>>({});
-  const [openCol, setOpenCol] = useState<string | null>(null);
+.topbar-center {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex: 1;
+}
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const colRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
-  const [statusWidth, setStatusWidth] = useState<number>(180);
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
-  // --- COLUMN DEFINITIONS (Product Name is SECOND column) ---
-  const columns: ColumnDef[] = [
-    // CORE
-    { key: "status", label: "Status", group: "Core", sticky: true }, // col 1
-    {
-      key: "product_name",
-      label: "Product Name",
-      group: "Core",
-      sticky: true,
-    }, // col 2
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(249, 250, 251, 0.25);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+}
 
-    // INVENTORY
-    { key: "sku", label: "SKU", group: "Inventory" },
-    { key: "vendor", label: "Vendor", group: "Inventory" },
-    {
-      key: "total_inventory_on_hand",
-      label: "Inventory On Hand – Total",
-      group: "Inventory",
-    },
-    {
-      key: "total_inventory_on_the_way",
-      label: "Inventory On The Way – Total",
-      group: "Inventory",
-    },
-    { key: "incoming_total", label: "Incoming Total", group: "Inventory" },
-    {
-      key: "qty_coastal_cowgirl",
-      label: "Inventory On Hand – Coastal Cowgirl",
-      group: "Inventory",
-    },
-    {
-      key: "qty_salty_tails",
-      label: "Inventory On Hand – Salty Tails",
-      group: "Inventory",
-    },
-    {
-      key: "qty_central_valley",
-      label: "Inventory On Hand – Central Valley",
-      group: "Inventory",
-    },
-    {
-      key: "new_qty_coastal_cowgirl",
-      label: "Inventory On The Way – Coastal Cowgirl",
-      group: "Inventory",
-    },
-    {
-      key: "new_qty_salty_tails",
-      label: "Inventory On The Way – Salty Tails",
-      group: "Inventory",
-    },
-    {
-      key: "new_qty_central_valley",
-      label: "Inventory On The Way – Central Valley",
-      group: "Inventory",
-    },
-    { key: "reorder_point", label: "Reorder Point", group: "Inventory" },
+/* Global search bar (only in topbar) */
+.topbar-search {
+  display: flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  padding: 4px 10px;
+  gap: 6px;
+}
 
-    // CLASSIFICATION
-    { key: "product_type", label: "Product Type", group: "Classification" },
-    {
-      key: "product_category",
-      label: "Product Category",
-      group: "Classification",
-    },
-    { key: "category", label: "Category", group: "Classification" },
-    {
-      key: "reporting_category",
-      label: "Reporting Category",
-      group: "Classification",
-    },
-    { key: "description", label: "Description", group: "Classification" },
-    {
-      key: "sales_description",
-      label: "Sales Description",
-      group: "Classification",
-    },
-    {
-      key: "purchase_description",
-      label: "Purchase Description",
-      group: "Classification",
-    },
-    { key: "tags", label: "Tags", group: "Classification" },
+.topbar-search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #f9fafb;
+  font-size: 13px;
+  width: 200px;
+}
 
-    // VARIANTS
-    {
-      key: "single_parent_or_variant",
-      label: "Single Parent or Variant",
-      group: "Variants",
-    },
-    { key: "variant_name", label: "Variant Name", group: "Variants" },
-    { key: "variant_title", label: "Variant Title", group: "Variants" },
-    { key: "option1_name", label: "Option 1 Name", group: "Variants" },
-    { key: "option1_value", label: "Option 1 Value", group: "Variants" },
-    { key: "option2_name", label: "Option 2 Name", group: "Variants" },
-    { key: "option2_value", label: "Option 2 Value", group: "Variants" },
-    { key: "option3_name", label: "Option 3 Name", group: "Variants" },
-    { key: "option3_value", label: "Option 3 Value", group: "Variants" },
-    { key: "option4_name", label: "Option 4 Name", group: "Variants" },
-    { key: "option4_value", label: "Option 4 Value", group: "Variants" },
+.topbar-search-input::placeholder {
+  color: #9ca3af;
+}
 
-    // SHOPIFY
-    { key: "handle", label: "Shopify Handle", group: "Shopify" },
-    { key: "permalink", label: "Shopify Permalink", group: "Shopify" },
-    {
-      key: "image_url",
-      label: "Product Image",
-      group: "Shopify",
-      isImage: true,
-    },
-    {
-      key: "variant_image_url",
-      label: "Variant Image",
-      group: "Shopify",
-      isImage: true,
-    },
-    { key: "square_image_id", label: "Square Image ID", group: "Shopify" },
 
-    // PRICING & ACCOUNTS
-    { key: "price", label: "Base Price", group: "Pricing & Accounts" },
-    { key: "online_price", label: "Online Price", group: "Pricing & Accounts" },
-    { key: "cost", label: "Cost", group: "Pricing & Accounts" },
-    { key: "compare_at", label: "Compare At Price", group: "Pricing & Accounts" },
-    {
-      key: "default_unit_cost",
-      label: "Default Unit Cost",
-      group: "Pricing & Accounts",
-    },
-    {
-      key: "income_account",
-      label: "Income Account (QB)",
-      group: "Pricing & Accounts",
-    },
-    {
-      key: "expense_account",
-      label: "Expense Account (QB)",
-      group: "Pricing & Accounts",
-    },
-    {
-      key: "inventory_asset_account",
-      label: "Inventory Asset Account (QB)",
-      group: "Pricing & Accounts",
-    },
+/* ============================================================
+   PILLS (Approved / Needs Approval cards, etc.)
+   ============================================================ */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  border: 1px solid transparent;
+}
 
-    // TAX & WEIGHT
-    { key: "sales_tax_rate", label: "Sales Tax Rate", group: "Tax & Weight" },
-    { key: "tax_code", label: "Tax Code", group: "Tax & Weight" },
-    { key: "taxable", label: "Taxable?", group: "Tax & Weight" },
-    {
-      key: "last_delivery_date",
-      label: "Last Delivery Date",
-      group: "Tax & Weight",
-    },
-    { key: "weight_lb", label: "Weight (lb)", group: "Tax & Weight" },
+.pill-green {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #22c55e;
+}
 
-    // FULFILLMENT
-    {
-      key: "shipping_enabled",
-      label: "Shipping Enabled",
-      group: "Fulfillment",
-    },
-    {
-      key: "self_serve_ordering_enabled",
-      label: "Self-Serve Ordering Enabled",
-      group: "Fulfillment",
-    },
-    {
-      key: "delivery_enabled",
-      label: "Delivery Enabled",
-      group: "Fulfillment",
-    },
-    { key: "pickup_enabled", label: "Pickup Enabled", group: "Fulfillment" },
+.pill-yellow {
+  background: #fef9c3;
+  color: #854d0e;
+  border-color: #eab308;
+}
 
-    // STOCK ALERTS
-    {
-      key: "stock_alert_enabled_cc",
-      label: "Stock Alert – Coastal Cowgirl",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_count_cc",
-      label: "Alert Threshold – Coastal Cowgirl",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_enabled_st",
-      label: "Stock Alert – Salty Tails",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_count_st",
-      label: "Alert Threshold – Salty Tails",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_enabled_cv",
-      label: "Stock Alert – Central Valley",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_count_cv",
-      label: "Alert Threshold – Central Valley",
-      group: "Stock Alerts",
-    },
+.pill-red {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #ef4444;
+}
 
-    // QUANTITIES SNAPSHOT
-    {
-      key: "total_quantity",
-      label: "Total Quantity (Snapshot)",
-      group: "Quantities",
-    },
-    {
-      key: "current_qty_cc",
-      label: "Current Qty – Coastal Cowgirl",
-      group: "Quantities",
-    },
-    {
-      key: "current_qty_st",
-      label: "Current Qty – Salty Tails",
-      group: "Quantities",
-    },
-    {
-      key: "current_qty_cv",
-      label: "Current Qty – Central Valley",
-      group: "Quantities",
-    },
-    {
-      key: "quantity_as_of_date",
-      label: "Quantity As Of Date",
-      group: "Quantities",
-    },
 
-    // IDENTIFIERS
-    { key: "parent_sku", label: "Parent SKU", group: "Identifiers" },
-    { key: "barcode", label: "Barcode", group: "Identifiers" },
-    { key: "gtin", label: "GTIN", group: "Identifiers" },
-    { key: "vendor_code", label: "Vendor Code", group: "Identifiers" },
-    { key: "sellable", label: "Sellable?", group: "Identifiers" },
-    { key: "stockable", label: "Stockable?", group: "Identifiers" },
-    {
-      key: "contains_alcohol",
-      label: "Contains Alcohol?",
-      group: "Identifiers",
-    },
-    {
-      key: "skip_pos_detail",
-      label: "Skip POS Detail",
-      group: "Identifiers",
-    },
+/* ============================================================
+   APP CONTENT
+   ============================================================ */
+.app-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 60px; /* space for bottom tab bar */
+}
 
-    // INTEGRATIONS / SEO
-    {
-      key: "shopify_product_id",
-      label: "Shopify Product ID",
-      group: "Integrations / SEO",
-    },
-    {
-      key: "shopify_variant_id",
-      label: "Shopify Variant ID",
-      group: "Integrations / SEO",
-    },
-    {
-      key: "variants_json",
-      label: "Variants JSON",
-      group: "Integrations / SEO",
-    },
-    {
-      key: "square_object_id",
-      label: "Square Object ID",
-      group: "Integrations / SEO",
-    },
-    {
-      key: "square_variation_id",
-      label: "Square Variation ID",
-      group: "Integrations / SEO",
-    },
-    { key: "stock_json", label: "Stock JSON", group: "Integrations / SEO" },
-    { key: "quickbooks_id", label: "QuickBooks ID", group: "Integrations / SEO" },
-    { key: "booker_id", label: "Booker ID", group: "Integrations / SEO" },
-    { key: "seo_title", label: "SEO Title", group: "Integrations / SEO" },
-    {
-      key: "seo_description",
-      label: "SEO Description",
-      group: "Integrations / SEO",
-    },
 
-    // LIFECYCLE
-    { key: "archived", label: "Archived?", group: "Lifecycle" },
-    { key: "archive_reason", label: "Archive Reason", group: "Lifecycle" },
-    {
-      key: "archived_timestamp",
-      label: "Archived Timestamp",
-      group: "Lifecycle",
-    },
-    { key: "master_id", label: "Master ID", group: "Lifecycle" },
-    { key: "date_added", label: "Date Added", group: "Lifecycle" },
-    { key: "last_updated", label: "Last Updated", group: "Lifecycle" },
-    {
-      key: "last_synced_square",
-      label: "Last Synced – Square",
-      group: "Lifecycle",
-    },
-    {
-      key: "last_synced_qb",
-      label: "Last Synced – QuickBooks",
-      group: "Lifecycle",
-    },
-    {
-      key: "last_synced_booker",
-      label: "Last Synced – Booker",
-      group: "Lifecycle",
-    },
-  ];
+/* ============================================================
+   BOTTOM TABBAR (mobile-style)
+   ============================================================ */
+.tabbar-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 6px 8px 10px;
+  background: #111827;
+  border-top: 1px solid #374151;
+  display: flex;
+  justify-content: space-around;
+  z-index: 50;
+}
 
-  // Group spans for header row
-  const groupSpans = useMemo(() => {
-    const map: Record<string, number> = {};
-    columns.forEach((c) => {
-      map[c.group] = (map[c.group] || 0) + 1;
-    });
-    return map;
-  }, [columns]);
+.tabbar-item {
+  flex: 1;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 12px;
+  padding: 6px 4px;
+  font-size: 11px;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
 
-  const uniqueGroups = Object.keys(groupSpans);
+.tabbar-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
 
-  // Close filter when clicking outside
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(e.target as Node)) {
-        setOpenCol(null);
-      }
-    };
-    window.addEventListener("mousedown", handleClick);
-    return () => window.removeEventListener("mousedown", handleClick);
-  }, []);
+.tabbar-item-active {
+  background: #f9fafb;
+  color: #111827;
+}
 
-  // Measure Status column width once we have rows, to align Product Name sticky left
-  useEffect(() => {
-    const el = colRefs.current["status"];
-    if (el) {
-      setStatusWidth(el.offsetWidth || 180);
-    }
-  }, [rows.length]);
 
-  // Filter + sort
-  const processed = useMemo(() => {
-    let data = [...rows];
+/* ============================================================
+   SHEET CONTAINER + TITLE
+   ============================================================ */
+.sheet-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
 
-    for (const col of Object.keys(filters)) {
-      const allowed = filters[col];
-      if (!allowed.length) continue;
-      data = data.filter((row) =>
-        allowed.includes(String((row as any)[col] ?? ""))
-      );
-    }
+.sheet-name {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 1px solid #d1d5db;
+  background: #e5e7eb;
+}
 
-    if (sort.col && sort.dir) {
-      data.sort((a, b) => {
-        const A = String((a as any)[sort.col] ?? "").toLowerCase();
-        const B = String((b as any)[sort.col] ?? "").toLowerCase();
-        if (A < B) return sort.dir === "asc" ? -1 : 1;
-        if (A > B) return sort.dir === "asc" ? 1 : -1;
-        return 0;
-      });
-    }
+.sheet-name-large {
+  font-size: 16px;
+}
 
-    return data;
-  }, [rows, filters, sort]);
 
-  // Sticky style for Status / Product cells
-  const getStickyStyle = (col: ColumnDef): React.CSSProperties => {
-    if (!col.sticky) return {};
-    if (col.key === "status") {
-      return {
-        position: "sticky",
-        left: 0,
-        zIndex: 10,
-        background: "#ffffff",
-      };
-    }
-    if (col.key === "product_name") {
-      return {
-        position: "sticky",
-        left: statusWidth,
-        zIndex: 9,
-        background: "#ffffff",
-      };
-    }
-    return {};
-  };
+/* ============================================================
+   SHEET TABLE WRAPPER
+   ============================================================ */
+.sheet-table-wrapper {
+  flex: 1;
+  overflow: auto;
+  background: #ffffff;
+  position: relative;
+  scrollbar-width: thin;
+}
 
-  if (loading) {
-    return (
-      <div className="sheet-container">
-        <div className="sheet-name">Master (loading…)</div>
-        <div className="empty-state">Loading Master inventory…</div>
-      </div>
-    );
+.wide-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-width: 100%;
+}
+
+
+/* ============================================================
+   MASTER TABLE
+   ============================================================ */
+.sheet-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 1200px;
+  table-layout: auto;
+}
+
+.sheet-table th,
+.sheet-table td {
+  border: 1px solid #d1d5db;
+  padding: 8px 10px;
+  font-size: 14px;
+  line-height: 1.35;
+  background-clip: padding-box;
+  white-space: normal;   /* allow wrapping */
+  word-break: break-word;
+}
+
+/* Column header row */
+.sheet-table th {
+  background: #f3f4f6;
+  font-weight: 600;
+  text-align: right;
+  position: relative;
+  user-select: none;
+  vertical-align: top;
+}
+
+/* Group header row (secondary headers like Core, Inventory, etc.) */
+.header-group-row th {
+  font-size: 12px;
+  text-align: center;
+  border-bottom: 2px solid #9ca3af;
+}
+
+/* Base styling for group header cells */
+.header-group-cell {
+  padding: 6px 10px;
+}
+
+/* Color-coded group headers */
+.header-group-core {
+  background: #dbeafe; /* soft blue */
+}
+
+.header-group-inventory {
+  background: #dcfce7; /* soft green */
+}
+
+.header-group-classification {
+  background: #ede9fe; /* soft purple */
+}
+
+.header-group-variants {
+  background: #fef9c3; /* soft yellow */
+}
+
+.header-group-shopify {
+  background: #ffedd5; /* soft orange */
+}
+
+.header-group-pricing-accounts {
+  background: #fee2e2; /* soft red */
+}
+
+.header-group-tax-weight {
+  background: #e0f2fe; /* soft sky */
+}
+
+.header-group-fulfillment {
+  background: #ccfbf1; /* soft teal */
+}
+
+.header-group-stock-alerts {
+  background: #fef3c7; /* soft amber */
+}
+
+.header-group-quantities {
+  background: #e5e7eb; /* neutral */
+}
+
+.header-group-identifiers {
+  background: #fce7f3; /* soft pink */
+}
+
+.header-group-integrations-seo {
+  background: #e0e7ff; /* soft indigo */
+}
+
+.header-group-lifecycle {
+  background: #e5e7eb; /* neutral */
+}
+
+
+/* ============================================================
+   HEADER CELL + FILTER BUTTON
+   ============================================================ */
+.header-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  position: relative;
+}
+
+.header-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Filter button */
+.filter-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 5px;
+  color: #9ca3af;
+  border-radius: 4px;
+  transition: 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filter-button:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #374151;
+}
+
+.filter-button.active {
+  background: rgba(59, 130, 246, 0.18);
+  color: #2563eb;
+}
+
+
+/* ============================================================
+   FILTER DROPDOWN MENU
+   ============================================================ */
+.filter-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  min-width: 240px;
+  max-width: 320px;
+  z-index: 2000;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.25);
+  animation: dropdown-fade 0.15s ease-out;
+}
+
+@keyframes dropdown-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
   }
-
-  if (error) {
-    return (
-      <div className="sheet-container">
-        <div className="sheet-name">Master (error)</div>
-        <div className="empty-state">Error: {error}</div>
-      </div>
-    );
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
+}
 
-  return (
-    <div className="sheet-container fade-in" ref={containerRef}>
-      <div className="sheet-name sheet-name-large">
-        Master (Source of Truth · read-only)
-      </div>
+.filter-section {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 
-      <div className="sheet-table-wrapper wide-scroll">
-        <table className="sheet-table sheet-table-master">
-          <thead>
-            {/* GROUP HEADER ROW (secondary headers, color-coded) */}
-            <tr className="header-group-row">
-              {uniqueGroups.map((group) => {
-                const span = groupSpans[group];
-                const slug = group.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-                const isCore = group === "Core";
+.filter-section button {
+  padding: 8px 10px;
+  font-size: 13px;
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease;
+}
 
-                // ONLY Core header cell is sticky on the left
-                const style: React.CSSProperties = isCore
-                  ? {
-                      position: "sticky",
-                      left: 0,
-                      zIndex: 11,
-                      background: "#dbeafe",
-                    }
-                  : {};
+.filter-section button:hover {
+  background: #f3f4f6;
+}
 
-                return (
-                  <th
-                    key={group}
-                    colSpan={span}
-                    className={`header-group-cell header-group-${slug}`}
-                    style={style}
-                  >
-                    {group}
-                  </th>
-                );
-              })}
-            </tr>
+.filter-divider {
+  border-bottom: 1px solid #e5e7eb;
+  margin: 4px 0;
+}
 
-            {/* COLUMN HEADERS (each with filter) */}
-            <tr>
-              {columns.map((col) => {
-                const stickyStyle = getStickyStyle(col);
+.filter-value-list {
+  max-height: 230px;
+  overflow-y: auto;
+  padding: 6px 10px 0;
+}
 
-                const uniqueValues = Array.from(
-                  new Set(
-                    rows.map((r) => String((r as any)[col.key] ?? ""))
-                  )
-                ).sort((a, b) => a.localeCompare(b));
+.filter-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  cursor: pointer;
+  font-size: 13px;
+  border-radius: 4px;
+}
 
-                const isActiveFilter =
-                  (filters[col.key] || []).length > 0 ||
-                  (sort.col === col.key && !!sort.dir);
+.filter-checkbox-row:hover {
+  background: #f3f4f6;
+}
 
-                return (
-                  <th
-                    key={col.key}
-                    style={stickyStyle}
-                    ref={(el) => {
-                      colRefs.current[col.key] = el;
-                    }}
-                  >
-                    <div className="header-cell">
-                      <span className="header-label">{col.label}</span>
-                      <button
-                        className={
-                          "filter-button" + (isActiveFilter ? " active" : "")
-                        }
-                        onClick={(e: ReactMouseEvent) => {
-                          e.stopPropagation();
-                          setOpenCol(openCol === col.key ? null : col.key);
-                        }}
-                      >
-                        <ChevronDown size={16} />
-                      </button>
+.filter-checkbox-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
 
-                      {openCol === col.key && (
-                        <ColumnFilterMenu
-                          values={uniqueValues}
-                          activeValues={filters[col.key] || []}
-                          setValues={(vals) =>
-                            setFilters((prev) => ({
-                              ...prev,
-                              [col.key]: vals,
-                            }))
-                          }
-                          sortAsc={() =>
-                            setSort({ col: col.key, dir: "asc" })
-                          }
-                          sortDesc={() =>
-                            setSort({ col: col.key, dir: "desc" })
-                          }
-                          clearSort={() =>
-                            setSort({ col: "", dir: null })
-                          }
-                          close={() => setOpenCol(null)}
-                        />
-                      )}
-                    </div>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
+/* Filter footer */
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 0 0 8px 8px;
+}
 
-          <tbody>
-            {processed.map((row) => (
-              <tr
-                key={row.id}
-                className={`master-row row-status-${String(
-                  (row as any).status || ""
-                ).toLowerCase()}`}
-              >
-                {columns.map((col) => {
-                  const stickyStyle = getStickyStyle(col);
-                  let value: any = (row as any)[col.key];
+.filter-action-btn {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
 
-                  if (typeof value === "boolean") {
-                    value = value ? "Yes" : "";
-                  }
+.filter-action-btn:hover {
+  background: #e5e7eb;
+}
 
-                  if (col.isImage) {
-                    return (
-                      <td key={col.key} style={stickyStyle}>
-                        {value ? (
-                          <img
-                            src={String(value)}
-                            alt=""
-                            className="mini-image"
-                          />
-                        ) : (
-                          ""
-                        )}
-                      </td>
-                    );
-                  }
+.filter-action-btn.primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
 
-                  return (
-                    <td key={col.key} style={stickyStyle}>
-                      {String(value ?? "")}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+.filter-action-btn.primary:hover {
+  background: #1d4ed8;
+}
 
-            {processed.length === 0 && (
-              <tr>
-                <td colSpan={columns.length} className="empty-state">
-                  No products match filters.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
+
+/* ============================================================
+   STICKY COLUMNS / GROUP HEADER (Core only)
+   ============================================================ */
+/* Status + Product Name cells use inline sticky styles from TSX.
+   The Core group header cell is also made sticky via inline style. */
+
+
+/* ============================================================
+   ROWS / CELLS
+   ============================================================ */
+.master-row {
+  transition: background 0.15s ease;
+}
+
+.master-row:hover {
+  background: #f9fafb;
+}
+
+.mini-image {
+  width: 34px;
+  height: 34px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #e5e7eb;
+}
+
+.cell-input {
+  width: 100%;
+  border: none;
+  font-size: 13px;
+  padding: 2px 4px;
+  background: transparent;
+  outline: none;
+}
+
+.cell-input:focus {
+  background: #eff6ff;
+  outline: 1px solid #3b82f6;
+}
+
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+  font-size: 15px;
+}
+
+
+/* ============================================================
+   CARD GRID (for summary cards, Approved / Needs Approval)
+   ============================================================ */
+.card-grid {
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  overflow: auto;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.card-subtitle {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.card-body {
+  padding: 8px 10px;
+}
+
+.card-footer {
+  padding: 8px 10px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+
+/* ============================================================
+   INTAKE FORM (kept from original)
+   ============================================================ */
+.intake-form {
+  padding: 8px;
+  background: white;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.intake-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.intake-grid label {
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.intake-span-2 {
+  grid-column: span 2;
+}
+
+.intake-footer {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+
+/* ============================================================
+   REPORTS (kept from original)
+   ============================================================ */
+.report-grid {
+  padding: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.report-card {
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  padding: 8px;
+  min-width: 120px;
+}
+
+.report-label {
+  font-size: 11px;
+  color: #4b5563;
+}
+
+.report-value {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn-primary {
+  border: none;
+  border-radius: 4px;
+  background: #16a34a;
+  color: white;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #15803d;
+}
+
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+.fade-in {
+  animation: fadein 0.25s ease-in;
+}
+
+@keyframes fadein {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dropdown-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
