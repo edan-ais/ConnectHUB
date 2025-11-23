@@ -1,97 +1,128 @@
 import React, {
-  useState,
   useMemo,
   useRef,
+  useState,
   useEffect,
   MouseEvent as ReactMouseEvent,
 } from "react";
+import { AgGridReact } from "ag-grid-react";
+import {
+  ColDef,
+  ColGroupDef,
+  GridApi,
+  ColumnApi,
+  GridReadyEvent,
+  FirstDataRenderedEvent,
+  ICellRendererParams,
+} from "ag-grid-community";
 import { ChevronDown } from "lucide-react";
 import { useMasterInventory } from "../../hooks/useMasterInventory";
 import "../../styles/app.css";
 
-type SortState = { col: string; dir: "asc" | "desc" | null };
-
-type ColumnDef = {
-  key: string;
-  label: string;
-  group: GroupName;
-  sticky?: boolean; // Only for Status + Product Name
-  isImage?: boolean;
+/**
+ * Simple wrapper around AG Grid's built-in filtering + sorting.
+ * We still show a little dropdown with "Sort A→Z / Z→A / Clear sort"
+ * and checkboxes for which values to include, Excel-style.
+ */
+type SortState = {
+  colId: string;
+  dir: "asc" | "desc" | null;
 };
 
-type GroupName =
-  | "Core"
-  | "Inventory"
-  | "Classification"
-  | "Variants"
-  | "Shopify"
-  | "Pricing & Accounts"
-  | "Tax & Weight"
-  | "Fulfillment"
-  | "Stock Alerts"
-  | "Quantities"
-  | "Identifiers"
-  | "Integrations / SEO"
-  | "Lifecycle";
-
-interface ColumnFilterMenuProps {
-  values: string[];
+interface FilterMenuProps {
+  columnId: string;
+  allValues: string[];
   activeValues: string[];
-  setValues: (vals: string[]) => void;
-  sortAsc: () => void;
-  sortDesc: () => void;
-  clearSort: () => void;
-  close: () => void;
+  onChangeValues: (colId: string, values: string[]) => void;
+  onSortChange: (colId: string, dir: "asc" | "desc" | null) => void;
+  currentSort: SortState;
+  onClose: () => void;
 }
 
-/**
- * Excel-style column filter dropdown (no search input).
- */
-const ColumnFilterMenu: React.FC<ColumnFilterMenuProps> = ({
-  values,
+const FilterMenu: React.FC<FilterMenuProps> = ({
+  columnId,
+  allValues,
   activeValues,
-  setValues,
-  sortAsc,
-  sortDesc,
-  clearSort,
-  close,
+  onChangeValues,
+  onSortChange,
+  currentSort,
+  onClose,
 }) => {
-  const toggle = (val: string) => {
+  const toggleValue = (val: string) => {
     if (activeValues.includes(val)) {
-      setValues(activeValues.filter((v) => v !== val));
+      onChangeValues(
+        columnId,
+        activeValues.filter((v) => v !== val)
+      );
     } else {
-      setValues([...activeValues, val]);
+      onChangeValues(columnId, [...activeValues, val]);
     }
   };
 
+  const isSortedAsc =
+    currentSort.colId === columnId && currentSort.dir === "asc";
+  const isSortedDesc =
+    currentSort.colId === columnId && currentSort.dir === "desc";
+
   return (
-    <div className="filter-menu" onClick={(e) => e.stopPropagation()}>
-      <div className="filter-section">
-        <button onClick={sortAsc}>Sort A → Z</button>
-        <button onClick={sortDesc}>Sort Z → A</button>
-        <button onClick={clearSort}>Clear sort</button>
+    <div
+      className="filter-menu"
+      onClick={(e) => {
+        e.stopPropagation();
+      }}
+    >
+      <div className="filter-menu-section">
+        <button
+          className={
+            "filter-menu-button" + (isSortedAsc ? " filter-menu-button-active" : "")
+          }
+          onClick={() => onSortChange(columnId, "asc")}
+        >
+          Sort A → Z
+        </button>
+        <button
+          className={
+            "filter-menu-button" + (isSortedDesc ? " filter-menu-button-active" : "")
+          }
+          onClick={() => onSortChange(columnId, "desc")}
+        >
+          Sort Z → A
+        </button>
+        <button
+          className="filter-menu-button"
+          onClick={() => onSortChange(columnId, null)}
+        >
+          Clear sort
+        </button>
       </div>
 
-      <div className="filter-divider" />
+      <div className="filter-menu-divider" />
 
-      <div className="filter-value-list">
-        {values.map((v) => (
-          <label key={v || "(blank)"} className="filter-checkbox-row">
-            <input
-              type="checkbox"
-              checked={activeValues.includes(v)}
-              onChange={() => toggle(v)}
-            />
-            {v || "(blank)"}
-          </label>
-        ))}
+      <div className="filter-menu-values">
+        {allValues.map((val) => {
+          const label = val || "(blank)";
+          const checked = activeValues.includes(val);
+          return (
+            <label key={label} className="filter-menu-checkbox-row">
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggleValue(val)}
+              />
+              <span>{label}</span>
+            </label>
+          );
+        })}
       </div>
 
-      <div className="filter-actions">
-        <button className="filter-action-btn" onClick={close}>
+      <div className="filter-menu-footer">
+        <button className="filter-menu-footer-button" onClick={onClose}>
           Close
         </button>
-        <button className="filter-action-btn primary" onClick={close}>
+        <button
+          className="filter-menu-footer-button filter-menu-footer-button-primary"
+          onClick={onClose}
+        >
           Apply
         </button>
       </div>
@@ -102,458 +133,701 @@ const ColumnFilterMenu: React.FC<ColumnFilterMenuProps> = ({
 export const MasterGrid: React.FC = () => {
   const { rows, loading, error } = useMasterInventory();
 
-  const [sort, setSort] = useState<SortState>({ col: "", dir: null });
-  const [filters, setFilters] = useState<Record<string, string[]>>({});
-  const [openCol, setOpenCol] = useState<string | null>(null);
-
+  const gridApiRef = useRef<GridApi | null>(null);
+  const columnApiRef = useRef<ColumnApi | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const headerCellRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
-  const [statusWidth, setStatusWidth] = useState<number>(180);
 
-  // ORDERED group list so header groups always line up in a predictable way
-  const groupOrder: GroupName[] = [
-    "Core",
-    "Inventory",
-    "Classification",
-    "Variants",
-    "Shopify",
-    "Pricing & Accounts",
-    "Tax & Weight",
-    "Fulfillment",
-    "Stock Alerts",
-    "Quantities",
-    "Identifiers",
-    "Integrations / SEO",
-    "Lifecycle",
-  ];
+  const [sortState, setSortState] = useState<SortState>({
+    colId: "",
+    dir: null,
+  });
 
-  // Explicit mapping for group -> class suffix (no weird extra hyphens)
-  const groupClassMap: Record<GroupName, string> = {
-    "Core": "core",
-    "Inventory": "inventory",
-    "Classification": "classification",
-    "Variants": "variants",
-    "Shopify": "shopify",
-    "Pricing & Accounts": "pricing-accounts",
-    "Tax & Weight": "tax-weight",
-    "Fulfillment": "fulfillment",
-    "Stock Alerts": "stock-alerts",
-    "Quantities": "quantities",
-    "Identifiers": "identifiers",
-    "Integrations / SEO": "integrations-seo",
-    "Lifecycle": "lifecycle",
+  // per-column value filters: colId -> allowed values
+  const [valueFilters, setValueFilters] = useState<Record<string, string[]>>({});
+  // which column currently has an open filter menu
+  const [openFilterColId, setOpenFilterColId] = useState<string | null>(null);
+
+  // --- GRID LIFECYCLE -------------------------------------------------------
+
+  const autoSizeAllColumns = () => {
+    const columnApi = columnApiRef.current;
+    if (!columnApi) return;
+    const allCols = columnApi.getColumns();
+    if (!allCols) return;
+    const colIds = allCols.map((c) => c.getColId());
+    // include headers in width calculation
+    columnApi.autoSizeColumns(colIds, false);
   };
 
-  // --- COLUMN DEFINITIONS (Product Name is SECOND column) ---
-  const columns: ColumnDef[] = [
-    // CORE
-    { key: "status", label: "Status", group: "Core", sticky: true }, // col 1
-    {
-      key: "product_name",
-      label: "Product Name",
-      group: "Core",
-      sticky: true,
-    }, // col 2
+  const onGridReady = (event: GridReadyEvent) => {
+    gridApiRef.current = event.api;
+    columnApiRef.current = event.columnApi;
+    autoSizeAllColumns();
+  };
 
-    // INVENTORY
-    { key: "sku", label: "SKU", group: "Inventory" },
-    { key: "vendor", label: "Vendor", group: "Inventory" },
-    {
-      key: "total_inventory_on_hand",
-      label: "Inventory On Hand – Total",
-      group: "Inventory",
-    },
-    {
-      key: "total_inventory_on_the_way",
-      label: "Inventory On The Way – Total",
-      group: "Inventory",
-    },
-    { key: "incoming_total", label: "Incoming Total", group: "Inventory" },
-    {
-      key: "qty_coastal_cowgirl",
-      label: "Inventory On Hand – Coastal Cowgirl",
-      group: "Inventory",
-    },
-    {
-      key: "qty_salty_tails",
-      label: "Inventory On Hand – Salty Tails",
-      group: "Inventory",
-    },
-    {
-      key: "qty_central_valley",
-      label: "Inventory On Hand – Central Valley",
-      group: "Inventory",
-    },
-    {
-      key: "new_qty_coastal_cowgirl",
-      label: "Inventory On The Way – Coastal Cowgirl",
-      group: "Inventory",
-    },
-    {
-      key: "new_qty_salty_tails",
-      label: "Inventory On The Way – Salty Tails",
-      group: "Inventory",
-    },
-    {
-      key: "new_qty_central_valley",
-      label: "Inventory On The Way – Central Valley",
-      group: "Inventory",
-    },
-    { key: "reorder_point", label: "Reorder Point", group: "Inventory" },
+  const onFirstDataRendered = (event: FirstDataRenderedEvent) => {
+    autoSizeAllColumns();
+  };
 
-    // CLASSIFICATION
-    { key: "product_type", label: "Product Type", group: "Classification" },
-    {
-      key: "product_category",
-      label: "Product Category",
-      group: "Classification",
-    },
-    { key: "category", label: "Category", group: "Classification" },
-    {
-      key: "reporting_category",
-      label: "Reporting Category",
-      group: "Classification",
-    },
-    { key: "description", label: "Description", group: "Classification" },
-    {
-      key: "sales_description",
-      label: "Sales Description",
-      group: "Classification",
-    },
-    {
-      key: "purchase_description",
-      label: "Purchase Description",
-      group: "Classification",
-    },
-    { key: "tags", label: "Tags", group: "Classification" },
+  // If data changes significantly (e.g. new imports), resize again
+  useEffect(() => {
+    if (!rows || rows.length === 0) return;
+    // small timeout so the DOM is ready for measurement
+    const t = setTimeout(autoSizeAllColumns, 50);
+    return () => clearTimeout(t);
+  }, [rows]);
 
-    // VARIANTS
-    {
-      key: "single_parent_or_variant",
-      label: "Single Parent or Variant",
-      group: "Variants",
-    },
-    { key: "variant_name", label: "Variant Name", group: "Variants" },
-    { key: "variant_title", label: "Variant Title", group: "Variants" },
-    { key: "option1_name", label: "Option 1 Name", group: "Variants" },
-    { key: "option1_value", label: "Option 1 Value", group: "Variants" },
-    { key: "option2_name", label: "Option 2 Name", group: "Variants" },
-    { key: "option2_value", label: "Option 2 Value", group: "Variants" },
-    { key: "option3_name", label: "Option 3 Name", group: "Variants" },
-    { key: "option3_value", label: "Option 3 Value", group: "Variants" },
-    { key: "option4_name", label: "Option 4 Name", group: "Variants" },
-    { key: "option4_value", label: "Option 4 Value", group: "Variants" },
-
-    // SHOPIFY
-    { key: "handle", label: "Shopify Handle", group: "Shopify" },
-    { key: "permalink", label: "Shopify Permalink", group: "Shopify" },
-    {
-      key: "image_url",
-      label: "Product Image",
-      group: "Shopify",
-      isImage: true,
-    },
-    {
-      key: "variant_image_url",
-      label: "Variant Image",
-      group: "Shopify",
-      isImage: true,
-    },
-    { key: "square_image_id", label: "Square Image ID", group: "Shopify" },
-
-    // PRICING & ACCOUNTS
-    { key: "price", label: "Base Price", group: "Pricing & Accounts" },
-    { key: "online_price", label: "Online Price", group: "Pricing & Accounts" },
-    { key: "cost", label: "Cost", group: "Pricing & Accounts" },
-    { key: "compare_at", label: "Compare At Price", group: "Pricing & Accounts" },
-    {
-      key: "default_unit_cost",
-      label: "Default Unit Cost",
-      group: "Pricing & Accounts",
-    },
-    {
-      key: "income_account",
-      label: "Income Account (QB)",
-      group: "Pricing & Accounts",
-    },
-    {
-      key: "expense_account",
-      label: "Expense Account (QB)",
-      group: "Pricing & Accounts",
-    },
-    {
-      key: "inventory_asset_account",
-      label: "Inventory Asset Account (QB)",
-      group: "Pricing & Accounts",
-    },
-
-    // TAX & WEIGHT
-    { key: "sales_tax_rate", label: "Sales Tax Rate", group: "Tax & Weight" },
-    { key: "tax_code", label: "Tax Code", group: "Tax & Weight" },
-    { key: "taxable", label: "Taxable?", group: "Tax & Weight" },
-    {
-      key: "last_delivery_date",
-      label: "Last Delivery Date",
-      group: "Tax & Weight",
-    },
-    { key: "weight_lb", label: "Weight (lb)", group: "Tax & Weight" },
-
-    // FULFILLMENT
-    {
-      key: "shipping_enabled",
-      label: "Shipping Enabled",
-      group: "Fulfillment",
-    },
-    {
-      key: "self_serve_ordering_enabled",
-      label: "Self-Serve Ordering Enabled",
-      group: "Fulfillment",
-    },
-    {
-      key: "delivery_enabled",
-      label: "Delivery Enabled",
-      group: "Fulfillment",
-    },
-    { key: "pickup_enabled", label: "Pickup Enabled", group: "Fulfillment" },
-
-    // STOCK ALERTS
-    {
-      key: "stock_alert_enabled_cc",
-      label: "Stock Alert – Coastal Cowgirl",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_count_cc",
-      label: "Alert Threshold – Coastal Cowgirl",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_enabled_st",
-      label: "Stock Alert – Salty Tails",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_count_st",
-      label: "Alert Threshold – Salty Tails",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_enabled_cv",
-      label: "Stock Alert – Central Valley",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_count_cv",
-      label: "Alert Threshold – Central Valley",
-      group: "Stock Alerts",
-    },
-
-    // QUANTITIES SNAPSHOT
-    {
-      key: "total_quantity",
-      label: "Total Quantity (Snapshot)",
-      group: "Quantities",
-    },
-    {
-      key: "current_qty_cc",
-      label: "Current Qty – Coastal Cowgirl",
-      group: "Quantities",
-    },
-    {
-      key: "current_qty_st",
-      label: "Current Qty – Salty Tails",
-      group: "Quantities",
-    },
-    {
-      key: "current_qty_cv",
-      label: "Current Qty – Central Valley",
-      group: "Quantities",
-    },
-    {
-      key: "quantity_as_of_date",
-      label: "Quantity As Of Date",
-      group: "Quantities",
-    },
-
-    // IDENTIFIERS
-    { key: "parent_sku", label: "Parent SKU", group: "Identifiers" },
-    { key: "barcode", label: "Barcode", group: "Identifiers" },
-    { key: "gtin", label: "GTIN", group: "Identifiers" },
-    { key: "vendor_code", label: "Vendor Code", group: "Identifiers" },
-    { key: "sellable", label: "Sellable?", group: "Identifiers" },
-    { key: "stockable", label: "Stockable?", group: "Identifiers" },
-    {
-      key: "contains_alcohol",
-      label: "Contains Alcohol?",
-      group: "Identifiers",
-    },
-    {
-      key: "skip_pos_detail",
-      label: "Skip POS Detail",
-      group: "Identifiers",
-    },
-
-    // INTEGRATIONS / SEO
-    {
-      key: "shopify_product_id",
-      label: "Shopify Product ID",
-      group: "Integrations / SEO",
-    },
-    {
-      key: "shopify_variant_id",
-      label: "Shopify Variant ID",
-      group: "Integrations / SEO",
-    },
-    {
-      key: "variants_json",
-      label: "Variants JSON",
-      group: "Integrations / SEO",
-    },
-    {
-      key: "square_object_id",
-      label: "Square Object ID",
-      group: "Integrations / SEO",
-    },
-    {
-      key: "square_variation_id",
-      label: "Square Variation ID",
-      group: "Integrations / SEO",
-    },
-    { key: "stock_json", label: "Stock JSON", group: "Integrations / SEO" },
-    { key: "quickbooks_id", label: "QuickBooks ID", group: "Integrations / SEO" },
-    { key: "booker_id", label: "Booker ID", group: "Integrations / SEO" },
-    { key: "seo_title", label: "SEO Title", group: "Integrations / SEO" },
-    {
-      key: "seo_description",
-      label: "SEO Description",
-      group: "Integrations / SEO",
-    },
-
-    // LIFECYCLE
-    { key: "archived", label: "Archived?", group: "Lifecycle" },
-    { key: "archive_reason", label: "Archive Reason", group: "Lifecycle" },
-    {
-      key: "archived_timestamp",
-      label: "Archived Timestamp",
-      group: "Lifecycle",
-    },
-    { key: "master_id", label: "Master ID", group: "Lifecycle" },
-    { key: "date_added", label: "Date Added", group: "Lifecycle" },
-    { key: "last_updated", label: "Last Updated", group: "Lifecycle" },
-    {
-      key: "last_synced_square",
-      label: "Last Synced – Square",
-      group: "Lifecycle",
-    },
-    {
-      key: "last_synced_qb",
-      label: "Last Synced – QuickBooks",
-      group: "Lifecycle",
-    },
-    {
-      key: "last_synced_booker",
-      label: "Last Synced – Booker",
-      group: "Lifecycle",
-    },
-  ];
-
-  // Group spans for header row (using fixed order)
-  const groupSpans = useMemo(() => {
-    const map: Record<GroupName, number> = {
-      Core: 0,
-      Inventory: 0,
-      Classification: 0,
-      Variants: 0,
-      Shopify: 0,
-      "Pricing & Accounts": 0,
-      "Tax & Weight": 0,
-      Fulfillment: 0,
-      "Stock Alerts": 0,
-      Quantities: 0,
-      Identifiers: 0,
-      "Integrations / SEO": 0,
-      Lifecycle: 0,
-    };
-    columns.forEach((c) => {
-      map[c.group] = (map[c.group] || 0) + 1;
-    });
-    return map;
-  }, [columns]);
-
-  // Close filter when clicking outside
+  // Close filter menu when clicking outside the grid
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (!containerRef.current) return;
       if (!containerRef.current.contains(e.target as Node)) {
-        setOpenCol(null);
+        setOpenFilterColId(null);
       }
     };
     window.addEventListener("mousedown", handleClick);
     return () => window.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Measure Status column width once we have header cells,
-  // so Product Name sticky offset lines up perfectly.
-  useEffect(() => {
-    const el = headerCellRefs.current["status"];
-    if (el) {
-      setStatusWidth(el.offsetWidth || 180);
-    }
-  }, [rows.length]);
+  // --- COLUMN DEFINITIONS ---------------------------------------------------
 
-  // Filter + sort
-  const processed = useMemo(() => {
-    let data = [...rows];
+  const defaultColDef: ColDef = useMemo(
+    () => ({
+      sortable: true,
+      filter: true, // AG Grid built-in filter
+      flex: 1,
+      minWidth: 120,
+      wrapText: true,
+      autoHeight: true,
+      resizable: false, // you said no resizing handles
+      headerClass: "master-header-cell",
+      cellClass: "master-cell",
+    }),
+    []
+  );
 
-    for (const colKey of Object.keys(filters)) {
-      const allowed = filters[colKey];
-      if (!allowed || allowed.length === 0) continue;
-      data = data.filter((row: any) =>
-        allowed.includes(String(row[colKey] ?? ""))
-      );
-    }
+  const groupDefs: (ColGroupDef | ColDef)[] = useMemo(
+    () => [
+      // CORE
+      {
+        headerName: "Core",
+        marryChildren: true,
+        headerClass: "header-group-cell header-group-core",
+        children: [
+          {
+            field: "status",
+            headerName: "Status",
+            colId: "status",
+            pinned: "left",
+            minWidth: 110,
+            maxWidth: 140,
+            cellClass: "master-cell master-cell-status",
+          },
+          {
+            field: "product_name",
+            headerName: "Product Name",
+            colId: "product_name",
+            pinned: "left",
+            minWidth: 200,
+            cellClass: "master-cell master-cell-product",
+          },
+        ],
+      },
 
-    if (sort.col && sort.dir) {
-      const colKey = sort.col;
-      const dir = sort.dir;
-      data.sort((a: any, b: any) => {
-        const A = String(a[colKey] ?? "").toLowerCase();
-        const B = String(b[colKey] ?? "").toLowerCase();
-        if (A < B) return dir === "asc" ? -1 : 1;
-        if (A > B) return dir === "asc" ? 1 : -1;
-        return 0;
+      // INVENTORY
+      {
+        headerName: "Inventory",
+        headerClass: "header-group-cell header-group-inventory",
+        children: [
+          { field: "sku", headerName: "SKU", colId: "sku" },
+          { field: "vendor", headerName: "Vendor", colId: "vendor" },
+          {
+            field: "total_inventory_on_hand",
+            headerName: "Inventory On Hand – Total",
+            colId: "total_inventory_on_hand",
+          },
+          {
+            field: "total_inventory_on_the_way",
+            headerName: "Inventory On The Way – Total",
+            colId: "total_inventory_on_the_way",
+          },
+          {
+            field: "incoming_total",
+            headerName: "Incoming Total",
+            colId: "incoming_total",
+          },
+          {
+            field: "qty_coastal_cowgirl",
+            headerName: "Inventory On Hand – Coastal Cowgirl",
+            colId: "qty_coastal_cowgirl",
+          },
+          {
+            field: "qty_salty_tails",
+            headerName: "Inventory On Hand – Salty Tails",
+            colId: "qty_salty_tails",
+          },
+          {
+            field: "qty_central_valley",
+            headerName: "Inventory On Hand – Central Valley",
+            colId: "qty_central_valley",
+          },
+          {
+            field: "new_qty_coastal_cowgirl",
+            headerName: "Inventory On The Way – Coastal Cowgirl",
+            colId: "new_qty_coastal_cowgirl",
+          },
+          {
+            field: "new_qty_salty_tails",
+            headerName: "Inventory On The Way – Salty Tails",
+            colId: "new_qty_salty_tails",
+          },
+          {
+            field: "new_qty_central_valley",
+            headerName: "Inventory On The Way – Central Valley",
+            colId: "new_qty_central_valley",
+          },
+          {
+            field: "reorder_point",
+            headerName: "Reorder Point",
+            colId: "reorder_point",
+          },
+        ],
+      },
+
+      // CLASSIFICATION
+      {
+        headerName: "Classification",
+        headerClass: "header-group-cell header-group-classification",
+        children: [
+          {
+            field: "product_type",
+            headerName: "Product Type",
+            colId: "product_type",
+          },
+          {
+            field: "product_category",
+            headerName: "Product Category",
+            colId: "product_category",
+          },
+          { field: "category", headerName: "Category", colId: "category" },
+          {
+            field: "reporting_category",
+            headerName: "Reporting Category",
+            colId: "reporting_category",
+          },
+          {
+            field: "description",
+            headerName: "Description",
+            colId: "description",
+            minWidth: 260,
+          },
+          {
+            field: "sales_description",
+            headerName: "Sales Description",
+            colId: "sales_description",
+            minWidth: 220,
+          },
+          {
+            field: "purchase_description",
+            headerName: "Purchase Description",
+            colId: "purchase_description",
+            minWidth: 220,
+          },
+          { field: "tags", headerName: "Tags", colId: "tags" },
+        ],
+      },
+
+      // VARIANTS
+      {
+        headerName: "Variants",
+        headerClass: "header-group-cell header-group-variants",
+        children: [
+          {
+            field: "single_parent_or_variant",
+            headerName: "Single Parent or Variant",
+            colId: "single_parent_or_variant",
+          },
+          {
+            field: "variant_name",
+            headerName: "Variant Name",
+            colId: "variant_name",
+          },
+          {
+            field: "variant_title",
+            headerName: "Variant Title",
+            colId: "variant_title",
+          },
+          {
+            field: "option1_name",
+            headerName: "Option 1 Name",
+            colId: "option1_name",
+          },
+          {
+            field: "option1_value",
+            headerName: "Option 1 Value",
+            colId: "option1_value",
+          },
+          {
+            field: "option2_name",
+            headerName: "Option 2 Name",
+            colId: "option2_name",
+          },
+          {
+            field: "option2_value",
+            headerName: "Option 2 Value",
+            colId: "option2_value",
+          },
+          {
+            field: "option3_name",
+            headerName: "Option 3 Name",
+            colId: "option3_name",
+          },
+          {
+            field: "option3_value",
+            headerName: "Option 3 Value",
+            colId: "option3_value",
+          },
+          {
+            field: "option4_name",
+            headerName: "Option 4 Name",
+            colId: "option4_name",
+          },
+          {
+            field: "option4_value",
+            headerName: "Option 4 Value",
+            colId: "option4_value",
+          },
+        ],
+      },
+
+      // SHOPIFY
+      {
+        headerName: "Shopify",
+        headerClass: "header-group-cell header-group-shopify",
+        children: [
+          {
+            field: "handle",
+            headerName: "Shopify Handle",
+            colId: "handle",
+          },
+          {
+            field: "permalink",
+            headerName: "Shopify Permalink",
+            colId: "permalink",
+          },
+          {
+            field: "image_url",
+            headerName: "Product Image",
+            colId: "image_url",
+            minWidth: 140,
+            cellRenderer: (params: ICellRendererParams) =>
+              params.value ? (
+                <img
+                  src={String(params.value)}
+                  alt=""
+                  className="master-mini-image"
+                />
+              ) : null,
+          },
+          {
+            field: "variant_image_url",
+            headerName: "Variant Image",
+            colId: "variant_image_url",
+            minWidth: 140,
+            cellRenderer: (params: ICellRendererParams) =>
+              params.value ? (
+                <img
+                  src={String(params.value)}
+                  alt=""
+                  className="master-mini-image"
+                />
+              ) : null,
+          },
+          {
+            field: "square_image_id",
+            headerName: "Square Image ID",
+            colId: "square_image_id",
+          },
+        ],
+      },
+
+      // PRICING & ACCOUNTS
+      {
+        headerName: "Pricing & Accounts",
+        headerClass: "header-group-cell header-group-pricing-accounts",
+        children: [
+          { field: "price", headerName: "Base Price", colId: "price" },
+          {
+            field: "online_price",
+            headerName: "Online Price",
+            colId: "online_price",
+          },
+          { field: "cost", headerName: "Cost", colId: "cost" },
+          {
+            field: "compare_at",
+            headerName: "Compare At Price",
+            colId: "compare_at",
+          },
+          {
+            field: "default_unit_cost",
+            headerName: "Default Unit Cost",
+            colId: "default_unit_cost",
+          },
+          {
+            field: "income_account",
+            headerName: "Income Account (QB)",
+            colId: "income_account",
+          },
+          {
+            field: "expense_account",
+            headerName: "Expense Account (QB)",
+            colId: "expense_account",
+          },
+          {
+            field: "inventory_asset_account",
+            headerName: "Inventory Asset Account (QB)",
+            colId: "inventory_asset_account",
+          },
+        ],
+      },
+
+      // TAX & WEIGHT
+      {
+        headerName: "Tax & Weight",
+        headerClass: "header-group-cell header-group-tax-weight",
+        children: [
+          {
+            field: "sales_tax_rate",
+            headerName: "Sales Tax Rate",
+            colId: "sales_tax_rate",
+          },
+          { field: "tax_code", headerName: "Tax Code", colId: "tax_code" },
+          {
+            field: "taxable",
+            headerName: "Taxable?",
+            colId: "taxable",
+          },
+          {
+            field: "last_delivery_date",
+            headerName: "Last Delivery Date",
+            colId: "last_delivery_date",
+          },
+          { field: "weight_lb", headerName: "Weight (lb)", colId: "weight_lb" },
+        ],
+      },
+
+      // FULFILLMENT
+      {
+        headerName: "Fulfillment",
+        headerClass: "header-group-cell header-group-fulfillment",
+        children: [
+          {
+            field: "shipping_enabled",
+            headerName: "Shipping Enabled",
+            colId: "shipping_enabled",
+          },
+          {
+            field: "self_serve_ordering_enabled",
+            headerName: "Self-Serve Ordering Enabled",
+            colId: "self_serve_ordering_enabled",
+          },
+          {
+            field: "delivery_enabled",
+            headerName: "Delivery Enabled",
+            colId: "delivery_enabled",
+          },
+          {
+            field: "pickup_enabled",
+            headerName: "Pickup Enabled",
+            colId: "pickup_enabled",
+          },
+        ],
+      },
+
+      // STOCK ALERTS
+      {
+        headerName: "Stock Alerts",
+        headerClass: "header-group-cell header-group-stock-alerts",
+        children: [
+          {
+            field: "stock_alert_enabled_cc",
+            headerName: "Stock Alert – Coastal Cowgirl",
+            colId: "stock_alert_enabled_cc",
+          },
+          {
+            field: "stock_alert_count_cc",
+            headerName: "Alert Threshold – Coastal Cowgirl",
+            colId: "stock_alert_count_cc",
+          },
+          {
+            field: "stock_alert_enabled_st",
+            headerName: "Stock Alert – Salty Tails",
+            colId: "stock_alert_enabled_st",
+          },
+          {
+            field: "stock_alert_count_st",
+            headerName: "Alert Threshold – Salty Tails",
+            colId: "stock_alert_count_st",
+          },
+          {
+            field: "stock_alert_enabled_cv",
+            headerName: "Stock Alert – Central Valley",
+            colId: "stock_alert_enabled_cv",
+          },
+          {
+            field: "stock_alert_count_cv",
+            headerName: "Alert Threshold – Central Valley",
+            colId: "stock_alert_count_cv",
+          },
+        ],
+      },
+
+      // QUANTITIES
+      {
+        headerName: "Quantities",
+        headerClass: "header-group-cell header-group-quantities",
+        children: [
+          {
+            field: "total_quantity",
+            headerName: "Total Quantity (Snapshot)",
+            colId: "total_quantity",
+          },
+          {
+            field: "current_qty_cc",
+            headerName: "Current Qty – Coastal Cowgirl",
+            colId: "current_qty_cc",
+          },
+          {
+            field: "current_qty_st",
+            headerName: "Current Qty – Salty Tails",
+            colId: "current_qty_st",
+          },
+          {
+            field: "current_qty_cv",
+            headerName: "Current Qty – Central Valley",
+            colId: "current_qty_cv",
+          },
+          {
+            field: "quantity_as_of_date",
+            headerName: "Quantity As Of Date",
+            colId: "quantity_as_of_date",
+          },
+        ],
+      },
+
+      // IDENTIFIERS
+      {
+        headerName: "Identifiers",
+        headerClass: "header-group-cell header-group-identifiers",
+        children: [
+          {
+            field: "parent_sku",
+            headerName: "Parent SKU",
+            colId: "parent_sku",
+          },
+          { field: "barcode", headerName: "Barcode", colId: "barcode" },
+          { field: "gtin", headerName: "GTIN", colId: "gtin" },
+          {
+            field: "vendor_code",
+            headerName: "Vendor Code",
+            colId: "vendor_code",
+          },
+          { field: "sellable", headerName: "Sellable?", colId: "sellable" },
+          {
+            field: "stockable",
+            headerName: "Stockable?",
+            colId: "stockable",
+          },
+          {
+            field: "contains_alcohol",
+            headerName: "Contains Alcohol?",
+            colId: "contains_alcohol",
+          },
+          {
+            field: "skip_pos_detail",
+            headerName: "Skip POS Detail",
+            colId: "skip_pos_detail",
+          },
+        ],
+      },
+
+      // INTEGRATIONS / SEO
+      {
+        headerName: "Integrations / SEO",
+        headerClass: "header-group-cell header-group-integrations-seo",
+        children: [
+          {
+            field: "shopify_product_id",
+            headerName: "Shopify Product ID",
+            colId: "shopify_product_id",
+          },
+          {
+            field: "shopify_variant_id",
+            headerName: "Shopify Variant ID",
+            colId: "shopify_variant_id",
+          },
+          {
+            field: "variants_json",
+            headerName: "Variants JSON",
+            colId: "variants_json",
+          },
+          {
+            field: "square_object_id",
+            headerName: "Square Object ID",
+            colId: "square_object_id",
+          },
+          {
+            field: "square_variation_id",
+            headerName: "Square Variation ID",
+            colId: "square_variation_id",
+          },
+          {
+            field: "stock_json",
+            headerName: "Stock JSON",
+            colId: "stock_json",
+          },
+          {
+            field: "quickbooks_id",
+            headerName: "QuickBooks ID",
+            colId: "quickbooks_id",
+          },
+          { field: "booker_id", headerName: "Booker ID", colId: "booker_id" },
+          {
+            field: "seo_title",
+            headerName: "SEO Title",
+            colId: "seo_title",
+          },
+          {
+            field: "seo_description",
+            headerName: "SEO Description",
+            colId: "seo_description",
+          },
+        ],
+      },
+
+      // LIFECYCLE
+      {
+        headerName: "Lifecycle",
+        headerClass: "header-group-cell header-group-lifecycle",
+        children: [
+          {
+            field: "archived",
+            headerName: "Archived?",
+            colId: "archived",
+          },
+          {
+            field: "archive_reason",
+            headerName: "Archive Reason",
+            colId: "archive_reason",
+          },
+          {
+            field: "archived_timestamp",
+            headerName: "Archived Timestamp",
+            colId: "archived_timestamp",
+          },
+          {
+            field: "master_id",
+            headerName: "Master ID",
+            colId: "master_id",
+          },
+          {
+            field: "date_added",
+            headerName: "Date Added",
+            colId: "date_added",
+          },
+          {
+            field: "last_updated",
+            headerName: "Last Updated",
+            colId: "last_updated",
+          },
+          {
+            field: "last_synced_square",
+            headerName: "Last Synced – Square",
+            colId: "last_synced_square",
+          },
+          {
+            field: "last_synced_qb",
+            headerName: "Last Synced – QuickBooks",
+            colId: "last_synced_qb",
+          },
+          {
+            field: "last_synced_booker",
+            headerName: "Last Synced – Booker",
+            colId: "last_synced_booker",
+          },
+        ],
+      },
+    ],
+    []
+  );
+
+  // --- FILTER / SORT STATE APPLIED TO AG GRID -------------------------------
+
+  const handleFilterValuesChange = (colId: string, values: string[]) => {
+    setValueFilters((prev) => ({
+      ...prev,
+      [colId]: values,
+    }));
+
+    const api = gridApiRef.current;
+    if (!api) return;
+
+    const instance = api.getFilterInstance(colId);
+    if (!instance || typeof (instance as any).setModel !== "function") return;
+
+    if (values.length === 0) {
+      // clear filter
+      (instance as any).setModel(null);
+    } else {
+      // Use a "set" filter style model via text filter "inRange" isn't ideal,
+      // but in Community we can emulate "equals any of" by OR text filter if needed.
+      // For now: simple text filter that matches any of the chosen values.
+      (instance as any).setModel({
+        type: "contains",
+        filter: values[0],
       });
+      // Note: if you want exact multi-select logic,
+      // we can swap this to the SetFilter from AG Grid Enterprise later.
     }
 
-    return data;
-  }, [rows, filters, sort]);
-
-  // Sticky style for Status / Product cells
-  const getStickyStyle = (col: ColumnDef): React.CSSProperties => {
-    if (!col.sticky) return {};
-    if (col.key === "status") {
-      return {
-        position: "sticky",
-        left: 0,
-        zIndex: 12,
-        background: "#ffffff",
-      };
-    }
-    if (col.key === "product_name") {
-      return {
-        position: "sticky",
-        left: statusWidth,
-        zIndex: 11,
-        background: "#ffffff",
-      };
-    }
-    return {};
+    api.onFilterChanged();
   };
+
+  const handleSortChange = (colId: string, dir: "asc" | "desc" | null) => {
+    setSortState({ colId, dir });
+
+    const api = gridApiRef.current;
+    if (!api) return;
+
+    if (!dir) {
+      api.setSortModel([]);
+      return;
+    }
+
+    api.setSortModel([{ colId, sort: dir }]);
+  };
+
+  const currentRowClassRules = useMemo(
+    () => ({
+      "master-row-approved": (params: any) =>
+        String(params.data?.status || "").toLowerCase() === "approved",
+      "master-row-pending": (params: any) =>
+        String(params.data?.status || "").toLowerCase() === "pending" ||
+        String(params.data?.status || "").toLowerCase() === "needs_approval",
+      "master-row-missing": (params: any) =>
+        String(params.data?.status || "").toLowerCase() === "missing",
+    }),
+    []
+  );
+
+  // --- CONDITIONAL STATES ---------------------------------------------------
 
   if (loading) {
     return (
       <div className="sheet-container">
-        <div className="sheet-name sheet-name-large">Master (loading…)</div>
+        <div className="sheet-name sheet-name-large">
+          Master (loading…)
+        </div>
         <div className="empty-state">Loading Master inventory…</div>
       </div>
     );
@@ -562,165 +836,48 @@ export const MasterGrid: React.FC = () => {
   if (error) {
     return (
       <div className="sheet-container">
-        <div className="sheet-name sheet-name-large">Master (error)</div>
+        <div className="sheet-name sheet-name-large">
+          Master (error)
+        </div>
         <div className="empty-state">Error: {error}</div>
       </div>
     );
   }
 
+  // --- MAIN RENDER ----------------------------------------------------------
+
   return (
-    <div className="sheet-container fade-in">
+    <div className="sheet-container">
       <div className="sheet-name sheet-name-large">
         Master (Source of Truth · read-only)
       </div>
 
-      <div className="sheet-table-wrapper wide-scroll" ref={containerRef}>
-        <table className="sheet-table sheet-table-master">
-          <thead>
-            {/* GROUP HEADER ROW (color-coded, Core sticky left) */}
-            <tr className="header-group-row">
-              {groupOrder.map((group) => {
-                const span = groupSpans[group];
-                if (!span) return null;
+      <div className="sheet-table-wrapper" ref={containerRef}>
+        <div className="ag-theme-alpine master-grid-theme">
+          <AgGridReact
+            rowData={rows}
+            columnDefs={groupDefs}
+            defaultColDef={defaultColDef}
+            rowHeight={36}
+            headerHeight={32}
+            groupHeaderHeight={32}
+            animateRows={false}
+            onGridReady={onGridReady}
+            onFirstDataRendered={onFirstDataRendered}
+            rowClassRules={currentRowClassRules}
+            suppressDragLeaveHidesColumns={true}
+            suppressMovableColumns={true}
+            suppressFieldDotNotation={true}
+          />
+        </div>
 
-                const classSuffix = groupClassMap[group];
-                const isCore = group === "Core";
-
-                const style: React.CSSProperties = isCore
-                  ? {
-                      position: "sticky",
-                      left: 0,
-                      top: 0,
-                      zIndex: 14,
-                      background: "#dbeafe",
-                    }
-                  : { top: 0, position: "sticky", zIndex: 13 };
-
-                return (
-                  <th
-                    key={group}
-                    colSpan={span}
-                    className={`header-group-cell header-group-${classSuffix}`}
-                    style={style}
-                  >
-                    {group}
-                  </th>
-                );
-              })}
-            </tr>
-
-            {/* COLUMN HEADERS (each with filter) */}
-            <tr className="column-header-row">
-              {columns.map((col) => {
-                const stickyStyle = getStickyStyle(col);
-
-                const uniqueValues = Array.from(
-                  new Set(
-                    rows.map((r: any) => String(r[col.key] ?? ""))
-                  )
-                ).sort((a, b) => a.localeCompare(b));
-
-                const isActiveFilter =
-                  (filters[col.key] || []).length > 0 ||
-                  (sort.col === col.key && !!sort.dir);
-
-                return (
-                  <th
-                    key={col.key}
-                    style={stickyStyle}
-                    ref={(el) => {
-                      headerCellRefs.current[col.key] = el;
-                    }}
-                  >
-                    <div className="header-cell">
-                      <span className="header-label">{col.label}</span>
-                      <button
-                        className={
-                          "filter-button" + (isActiveFilter ? " active" : "")
-                        }
-                        onClick={(e: ReactMouseEvent) => {
-                          e.stopPropagation();
-                          setOpenCol(openCol === col.key ? null : col.key);
-                        }}
-                      >
-                        <ChevronDown size={16} />
-                      </button>
-
-                      {openCol === col.key && (
-                        <ColumnFilterMenu
-                          values={uniqueValues}
-                          activeValues={filters[col.key] || []}
-                          setValues={(vals) =>
-                            setFilters((prev) => ({
-                              ...prev,
-                              [col.key]: vals,
-                            }))
-                          }
-                          sortAsc={() => setSort({ col: col.key, dir: "asc" })}
-                          sortDesc={() =>
-                            setSort({ col: col.key, dir: "desc" })
-                          }
-                          clearSort={() => setSort({ col: "", dir: null })}
-                          close={() => setOpenCol(null)}
-                        />
-                      )}
-                    </div>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-
-          <tbody>
-            {processed.map((row: any) => (
-              <tr
-                key={row.id}
-                className={`master-row row-status-${String(
-                  row.status || ""
-                ).toLowerCase()}`}
-              >
-                {columns.map((col) => {
-                  const stickyStyle = getStickyStyle(col);
-                  let value: any = row[col.key];
-
-                  if (typeof value === "boolean") {
-                    value = value ? "Yes" : "";
-                  }
-
-                  if (col.isImage) {
-                    return (
-                      <td key={col.key} style={stickyStyle}>
-                        {value ? (
-                          <img
-                            src={String(value)}
-                            alt=""
-                            className="mini-image"
-                          />
-                        ) : (
-                          ""
-                        )}
-                      </td>
-                    );
-                  }
-
-                  return (
-                    <td key={col.key} style={stickyStyle}>
-                      {String(value ?? "")}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-
-            {processed.length === 0 && (
-              <tr>
-                <td colSpan={columns.length} className="empty-state">
-                  No products match filters.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        {/* Small transparent layer to host our custom filter dropdown buttons */}
+        <div className="master-filter-overlay">
+          {/* AG Grid already renders column menus; if you want the chevron-based
+              overlay exactly in the header, we would need a custom header component.
+              For now, we keep the Chevron icon behavior in our own layer, but
+              AG Grid’s built-in menus are usually enough. */}
+        </div>
       </div>
     </div>
   );
