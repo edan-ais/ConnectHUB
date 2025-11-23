@@ -1,10 +1,91 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { useMasterInventory } from "../../hooks/useMasterInventory";
-import { MasterStatus } from "../../lib/types";
+import { ChevronDown } from "lucide-react";
 import "../../styles/app.css";
+
+// Dropdown filter for each column
+interface ColumnFilterMenuProps {
+  columnKey: string;
+  values: string[];
+  activeValues: string[];
+  onChange: (vals: string[]) => void;
+  onSortAsc: () => void;
+  onSortDesc: () => void;
+  clearSort: () => void;
+}
+const ColumnFilterMenu: React.FC<ColumnFilterMenuProps> = ({
+  columnKey,
+  values,
+  activeValues,
+  onChange,
+  onSortAsc,
+  onSortDesc,
+  clearSort
+}) => {
+  const [search, setSearch] = useState("");
+
+  const filteredValues = values.filter(v =>
+    v.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const toggle = (val: string) => {
+    if (activeValues.includes(val)) {
+      onChange(activeValues.filter(v => v !== val));
+    } else {
+      onChange([...activeValues, val]);
+    }
+  };
+
+  return (
+    <div className="filter-menu">
+      <div className="filter-section">
+        <button onClick={onSortAsc}>Sort A → Z</button>
+        <button onClick={onSortDesc}>Sort Z → A</button>
+        <button onClick={clearSort}>Clear Sort</button>
+      </div>
+
+      <div className="filter-divider" />
+
+      <div className="filter-section">
+        <input
+          type="text"
+          placeholder="Search values…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="filter-search-input"
+        />
+
+        <div className="filter-value-list">
+          {filteredValues.map(val => (
+            <label key={val} className="filter-checkbox-row">
+              <input
+                type="checkbox"
+                checked={activeValues.includes(val)}
+                onChange={() => toggle(val)}
+              />
+              {val || "(blank)"}
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const MasterGrid: React.FC = () => {
   const { rows, loading, error } = useMasterInventory();
+
+  // Global search bar is in TopBar, pulled from Zustand
+  const [sortBy, setSortBy] = useState<{ col: string; dir: "asc" | "desc" | null }>({
+    col: "",
+    dir: null
+  });
+
+  // Active value filters per column
+  const [filters, setFilters] = useState<{ [key: string]: string[] }>({});
+
+  // Which column dropdown is currently open
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -24,260 +105,234 @@ export const MasterGrid: React.FC = () => {
     );
   }
 
+  // --------------------------
+  // COLUMN DEFINITIONS
+  // --------------------------
+  const columns = [
+    { key: "status", label: "Status", sticky: true },
+    { key: "product_name", label: "Product Name", sticky: true },
+    { key: "sku", label: "SKU" },
+    { key: "vendor", label: "Vendor" },
+    { key: "total_inventory_on_hand", label: "Total On Hand" },
+    { key: "total_inventory_on_the_way", label: "Total On The Way" },
+    { key: "incoming_total", label: "Incoming Total" },
+    { key: "qty_coastal_cowgirl", label: "Qty CC" },
+    { key: "qty_salty_tails", label: "Qty ST" },
+    { key: "qty_central_valley", label: "Qty CV" },
+    { key: "new_qty_coastal_cowgirl", label: "New Qty CC" },
+    { key: "new_qty_salty_tails", label: "New Qty ST" },
+    { key: "new_qty_central_valley", label: "New Qty CV" },
+    { key: "reorder_point", label: "Reorder Point" },
+    { key: "product_type", label: "Product Type" },
+    { key: "product_category", label: "Product Category" },
+    { key: "category", label: "Category" },
+    { key: "reporting_category", label: "Reporting Category" },
+    { key: "description", label: "Description" },
+    { key: "sales_description", label: "Sales Description" },
+    { key: "purchase_description", label: "Purchase Description" },
+    { key: "tags", label: "Tags" },
+    { key: "single_parent_or_variant", label: "Parent/Variant" },
+    { key: "variant_name", label: "Variant Name" },
+    { key: "variant_title", label: "Variant Title" },
+    { key: "option1_name", label: "Option1 Name" },
+    { key: "option1_value", label: "Option1 Value" },
+    { key: "option2_name", label: "Option2 Name" },
+    { key: "option2_value", label: "Option2 Value" },
+    { key: "option3_name", label: "Option3 Name" },
+    { key: "option3_value", label: "Option3 Value" },
+    { key: "option4_name", label: "Option4 Name" },
+    { key: "option4_value", label: "Option4 Value" },
+    { key: "handle", label: "Handle" },
+    { key: "permalink", label: "Permalink" },
+    { key: "image_url", label: "Image" },
+    { key: "variant_image_url", label: "Variant Image" },
+    { key: "square_image_id", label: "Square Image ID" },
+
+    // Pricing, Accounts, Fulfillment, Identifiers, Integrations, Lifecycle...
+    // (Rest of columns are unchanged; same as previous version)
+    { key: "price", label: "Price" },
+    { key: "online_price", label: "Online Price" },
+    { key: "cost", label: "Cost" },
+    { key: "compare_at", label: "Compare At" },
+    { key: "default_unit_cost", label: "Default Unit Cost" },
+    { key: "income_account", label: "Income Account" },
+    { key: "expense_account", label: "Expense Account" },
+    { key: "inventory_asset_account", label: "Inventory Asset Account" },
+    { key: "sales_tax_rate", label: "Tax Rate" },
+    { key: "tax_code", label: "Tax Code" },
+    { key: "taxable", label: "Taxable" },
+    { key: "last_delivery_date", label: "Last Delivery" },
+    { key: "weight_lb", label: "Weight (lb)" },
+    { key: "shipping_enabled", label: "Shipping" },
+    { key: "self_serve_ordering_enabled", label: "Self-Serve" },
+    { key: "delivery_enabled", label: "Delivery" },
+    { key: "pickup_enabled", label: "Pickup" },
+    { key: "stock_alert_enabled_cc", label: "Alert CC" },
+    { key: "stock_alert_count_cc", label: "Alert CC Count" },
+    { key: "stock_alert_enabled_st", label: "Alert ST" },
+    { key: "stock_alert_count_st", label: "Alert ST Count" },
+    { key: "stock_alert_enabled_cv", label: "Alert CV" },
+    { key: "stock_alert_count_cv", label: "Alert CV Count" },
+    { key: "total_quantity", label: "Total Quantity" },
+    { key: "current_qty_cc", label: "Current CC" },
+    { key: "current_qty_st", label: "Current ST" },
+    { key: "current_qty_cv", label: "Current CV" },
+    { key: "quantity_as_of_date", label: "As Of" },
+    { key: "parent_sku", label: "Parent SKU" },
+    { key: "barcode", label: "Barcode" },
+    { key: "gtin", label: "GTIN" },
+    { key: "vendor_code", label: "Vendor Code" },
+    { key: "sellable", label: "Sellable" },
+    { key: "stockable", label: "Stockable" },
+    { key: "contains_alcohol", label: "Contains Alcohol" },
+    { key: "skip_pos_detail", label: "Skip POS Detail" },
+    { key: "shopify_product_id", label: "Shopify Product ID" },
+    { key: "shopify_variant_id", label: "Shopify Variant ID" },
+    { key: "variants_json", label: "Variants JSON" },
+    { key: "square_object_id", label: "Square Object ID" },
+    { key: "square_variation_id", label: "Square Variation ID" },
+    { key: "stock_json", label: "Stock JSON" },
+    { key: "quickbooks_id", label: "QuickBooks ID" },
+    { key: "booker_id", label: "Booker ID" },
+    { key: "seo_title", label: "SEO Title" },
+    { key: "seo_description", label: "SEO Description" },
+    { key: "archived", label: "Archived" },
+    { key: "archive_reason", label: "Reason" },
+    { key: "archived_timestamp", label: "Archived Timestamp" },
+    { key: "master_id", label: "Master ID" },
+    { key: "date_added", label: "Date Added" },
+    { key: "last_updated", label: "Last Updated" },
+    { key: "last_synced_square", label: "Synced Square" },
+    { key: "last_synced_qb", label: "Synced QB" },
+    { key: "last_synced_booker", label: "Synced Booker" }
+  ];
+
+  // -------------------------
+  // FILTER + SORT ENGINE
+  // -------------------------
+  const processedRows = useMemo(() => {
+    let output = [...rows];
+
+    // FILTERS (checkbox unique values)
+    for (const key of Object.keys(filters)) {
+      const allowed = filters[key];
+      if (allowed.length === 0) continue;
+
+      output = output.filter(row => {
+        const v = String((row as any)[key] ?? "");
+        return allowed.includes(v);
+      });
+    }
+
+    // SORT
+    if (sortBy.dir) {
+      output.sort((a, b) => {
+        const A = String((a as any)[sortBy.col] ?? "").toLowerCase();
+        const B = String((b as any)[sortBy.col] ?? "").toLowerCase();
+        if (A < B) return sortBy.dir === "asc" ? -1 : 1;
+        if (A > B) return sortBy.dir === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return output;
+  }, [rows, filters, sortBy]);
+
+  // -----------------------------------
+  // Render table
+  // -----------------------------------
   return (
     <div className="sheet-container fade-in">
       <div className="sheet-name">Master (Source of Truth · read-only)</div>
 
-      <div className="sheet-table-wrapper">
-        <table className="sheet-table sheet-table-master">
-          {/* HEADER GROUPS */}
+      <div className="sheet-table-wrapper wide-scroll">
+        <table className="sheet-table sheet-table-master no-shorten">
           <thead>
-            <tr className="header-group-row">
-              <th className="col-sticky" colSpan={2}>Core</th>
-              <th colSpan={12}>Inventory</th>
-              <th colSpan={8}>Classification</th>
-              <th colSpan={8}>Variants</th>
-              <th colSpan={6}>Shopify</th>
-              <th colSpan={10}>Pricing & Accounts</th>
-              <th colSpan={12}>Fulfillment</th>
-              <th colSpan={10}>Identifiers</th>
-              <th colSpan={10}>Integrations / SEO</th>
-              <th colSpan={7}>Lifecycle</th>
-            </tr>
-
-            {/* COLUMN HEADERS */}
             <tr>
-              <th className="col-sticky">Status</th>
-              <th className="col-sticky">Product Name</th>
+              {columns.map(col => (
+                <th key={col.key} className={col.sticky ? "col-sticky" : ""}>
+                  <div className="header-cell">
+                    <span>{col.label}</span>
+                    <button
+                      className="filter-button"
+                      onClick={() =>
+                        setOpenFilter(openFilter === col.key ? null : col.key)
+                      }
+                    >
+                      <ChevronDown size={14} />
+                    </button>
 
-              <th>SKU</th>
-              <th>Vendor</th>
-              <th>Total On Hand</th>
-              <th>Total On The Way</th>
-              <th>Incoming Total</th>
-              <th>Qty CC</th>
-              <th>Qty ST</th>
-              <th>Qty CV</th>
-              <th>New Qty CC</th>
-              <th>New Qty ST</th>
-              <th>New Qty CV</th>
-              <th>Reorder Point</th>
-
-              <th>Product Type</th>
-              <th>Product Category</th>
-              <th>Category</th>
-              <th>Reporting Category</th>
-              <th>Description</th>
-              <th>Sales Description</th>
-              <th>Purchase Description</th>
-              <th>Tags</th>
-
-              <th>Parent/Variant</th>
-              <th>Variant Name</th>
-              <th>Variant Title</th>
-              <th>Option1 Name</th>
-              <th>Option1 Value</th>
-              <th>Option2 Name</th>
-              <th>Option2 Value</th>
-              <th>Option3 Name</th>
-              <th>Option3 Value</th>
-              <th>Option4 Name</th>
-              <th>Option4 Value</th>
-
-              <th>Handle</th>
-              <th>Permalink</th>
-              <th>Image</th>
-              <th>Variant Image</th>
-              <th>Square Image ID</th>
-
-              <th>Price</th>
-              <th>Online Price</th>
-              <th>Cost</th>
-              <th>Compare At</th>
-              <th>Default Unit Cost</th>
-              <th>Income Account</th>
-              <th>Expense Account</th>
-              <th>Inventory Asset Account</th>
-
-              <th>Tax Rate</th>
-              <th>Tax Code</th>
-              <th>Taxable</th>
-
-              <th>Last Delivery</th>
-              <th>Weight (lb)</th>
-
-              <th>Shipping</th>
-              <th>Self-Serve</th>
-              <th>Delivery</th>
-              <th>Pickup</th>
-
-              <th>Alert CC</th>
-              <th>Alert CC Count</th>
-              <th>Alert ST</th>
-              <th>Alert ST Count</th>
-              <th>Alert CV</th>
-              <th>Alert CV Count</th>
-
-              <th>Total Quantity</th>
-              <th>Current CC</th>
-              <th>Current ST</th>
-              <th>Current CV</th>
-              <th>As Of</th>
-
-              <th>Parent SKU</th>
-              <th>Barcode</th>
-              <th>GTIN</th>
-              <th>Vendor Code</th>
-              <th>Sellable</th>
-              <th>Stockable</th>
-              <th>Contains Alcohol</th>
-              <th>Skip POS Detail</th>
-
-              <th>Shopify Product ID</th>
-              <th>Shopify Variant ID</th>
-              <th>Variants JSON</th>
-              <th>Square Object ID</th>
-              <th>Square Variation ID</th>
-              <th>Stock JSON</th>
-              <th>QuickBooks ID</th>
-              <th>Booker ID</th>
-              <th>SEO Title</th>
-              <th>SEO Description</th>
-
-              <th>Archived</th>
-              <th>Reason</th>
-              <th>Archived Timestamp</th>
-              <th>Master ID</th>
-              <th>Date Added</th>
-              <th>Last Updated</th>
-              <th>Synced Square</th>
-              <th>Synced QB</th>
-              <th>Synced Booker</th>
+                    {openFilter === col.key && (
+                      <ColumnFilterMenu
+                        columnKey={col.key}
+                        values={[
+                          ...new Set(
+                            rows.map(r => String((r as any)[col.key] ?? ""))
+                          )
+                        ]}
+                        activeValues={filters[col.key] || []}
+                        onChange={vals =>
+                          setFilters(prev => ({ ...prev, [col.key]: vals }))
+                        }
+                        onSortAsc={() => {
+                          setSortBy({ col: col.key, dir: "asc" });
+                          setOpenFilter(null);
+                        }}
+                        onSortDesc={() => {
+                          setSortBy({ col: col.key, dir: "desc" });
+                          setOpenFilter(null);
+                        }}
+                        clearSort={() => {
+                          setSortBy({ col: "", dir: null });
+                          setOpenFilter(null);
+                        }}
+                      />
+                    )}
+                  </div>
+                </th>
+              ))}
             </tr>
           </thead>
 
           <tbody>
-            {rows.map(row => (
-              <tr key={row.id} className={`master-row row-status-${row.status.toLowerCase()}`}>
-                <td className="col-sticky">{row.status}</td>
-                <td className="col-sticky">
-                  <div className="product-preview-cell">
-                    <div className="product-preview-thumb">
-                      {row.image_url ? (
-                        <img src={row.image_url} alt={row.product_name} />
-                      ) : (
-                        <div className="product-preview-placeholder" />
-                      )}
-                    </div>
-                    {row.product_name}
-                  </div>
-                </td>
+            {processedRows.map(row => (
+              <tr key={row.id} className={`master-row row-${row.status}`}>
+                {columns.map(col => {
+                  const v = (row as any)[col.key];
+                  const stickyClass = col.sticky ? "col-sticky" : "";
 
-                <td>{row.sku}</td>
-                <td>{row.vendor}</td>
-                <td>{row.total_inventory_on_hand}</td>
-                <td>{row.total_inventory_on_the_way}</td>
-                <td>{row.incoming_total}</td>
-                <td>{row.qty_coastal_cowgirl}</td>
-                <td>{row.qty_salty_tails}</td>
-                <td>{row.qty_central_valley}</td>
-                <td>{row.new_qty_coastal_cowgirl}</td>
-                <td>{row.new_qty_salty_tails}</td>
-                <td>{row.new_qty_central_valley}</td>
-                <td>{row.reorder_point}</td>
+                  if (col.key === "image_url" || col.key === "variant_image_url") {
+                    return (
+                      <td key={col.key} className={stickyClass}>
+                        {v ? <img src={v} className="mini-image" /> : ""}
+                      </td>
+                    );
+                  }
 
-                <td>{row.product_type}</td>
-                <td>{row.product_category}</td>
-                <td>{row.category}</td>
-                <td>{row.reporting_category}</td>
-                <td className="cell-wrap">{row.description}</td>
-                <td className="cell-wrap">{row.sales_description}</td>
-                <td className="cell-wrap">{row.purchase_description}</td>
-                <td className="cell-wrap">{row.tags}</td>
+                  if (typeof v === "boolean") {
+                    return (
+                      <td key={col.key} className={stickyClass}>
+                        {v ? "Yes" : ""}
+                      </td>
+                    );
+                  }
 
-                <td>{row.single_parent_or_variant}</td>
-                <td>{row.variant_name}</td>
-                <td>{row.variant_title}</td>
-                <td>{row.option1_name}</td>
-                <td>{row.option1_value}</td>
-                <td>{row.option2_name}</td>
-                <td>{row.option2_value}</td>
-                <td>{row.option3_name}</td>
-                <td>{row.option3_value}</td>
-                <td>{row.option4_name}</td>
-                <td>{row.option4_value}</td>
-
-                <td>{row.handle}</td>
-                <td>{row.permalink}</td>
-                <td>{row.image_url && <img src={row.image_url} className="mini-image" />}</td>
-                <td>{row.variant_image_url && <img src={row.variant_image_url} className="mini-image" />}</td>
-                <td>{row.square_image_id}</td>
-
-                <td>{row.price}</td>
-                <td>{row.online_price}</td>
-                <td>{row.cost}</td>
-                <td>{row.compare_at}</td>
-                <td>{row.default_unit_cost}</td>
-                <td>{row.income_account}</td>
-                <td>{row.expense_account}</td>
-                <td>{row.inventory_asset_account}</td>
-
-                <td>{row.sales_tax_rate}</td>
-                <td>{row.tax_code}</td>
-                <td>{row.taxable ? "Yes" : "No"}</td>
-
-                <td>{row.last_delivery_date}</td>
-                <td>{row.weight_lb}</td>
-
-                <td>{row.shipping_enabled ? "Yes" : "No"}</td>
-                <td>{row.self_serve_ordering_enabled ? "Yes" : "No"}</td>
-                <td>{row.delivery_enabled ? "Yes" : "No"}</td>
-                <td>{row.pickup_enabled ? "Yes" : "No"}</td>
-
-                <td>{row.stock_alert_enabled_cc ? "Yes" : "No"}</td>
-                <td>{row.stock_alert_count_cc}</td>
-                <td>{row.stock_alert_enabled_st ? "Yes" : "No"}</td>
-                <td>{row.stock_alert_count_st}</td>
-                <td>{row.stock_alert_enabled_cv ? "Yes" : "No"}</td>
-                <td>{row.stock_alert_count_cv}</td>
-
-                <td>{row.total_quantity}</td>
-                <td>{row.current_qty_cc}</td>
-                <td>{row.current_qty_st}</td>
-                <td>{row.current_qty_cv}</td>
-                <td>{row.quantity_as_of_date}</td>
-
-                <td>{row.parent_sku}</td>
-                <td>{row.barcode}</td>
-                <td>{row.gtin}</td>
-                <td>{row.vendor_code}</td>
-                <td>{row.sellable ? "Yes" : "No"}</td>
-                <td>{row.stockable ? "Yes" : "No"}</td>
-                <td>{row.contains_alcohol ? "Yes" : "No"}</td>
-                <td>{row.skip_pos_detail ? "Yes" : "No"}</td>
-
-                <td>{row.shopify_product_id}</td>
-                <td>{row.shopify_variant_id}</td>
-                <td className="cell-wrap">JSON</td>
-                <td>{row.square_object_id}</td>
-                <td>{row.square_variation_id}</td>
-                <td className="cell-wrap">JSON</td>
-                <td>{row.quickbooks_id}</td>
-                <td>{row.booker_id}</td>
-                <td className="cell-wrap">{row.seo_title}</td>
-                <td className="cell-wrap">{row.seo_description}</td>
-
-                <td>{row.archived ? "Yes" : "No"}</td>
-                <td>{row.archive_reason}</td>
-                <td>{row.archived_timestamp}</td>
-                <td>{row.master_id}</td>
-                <td>{row.date_added}</td>
-                <td>{row.last_updated}</td>
-                <td>{row.last_synced_square}</td>
-                <td>{row.last_synced_qb}</td>
-                <td>{row.last_synced_booker}</td>
+                  return (
+                    <td key={col.key} className={stickyClass}>
+                      {String(v ?? "")}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
+
+            {processedRows.length === 0 && (
+              <tr>
+                <td colSpan={columns.length} className="empty-state">
+                  No products match filters.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
