@@ -2,7 +2,7 @@ import React from "react";
 import { TopBar } from "./TopBar";
 import { TabBar } from "./TabBar";
 import { useInventoryStore } from "../../state/inventoryStore";
-import { MasterGrid } from "../inventory/MasterGrid";
+import { InventoryWorkspace } from "../inventory/MasterGrid";
 import { MainValidationView } from "../inventory/MainValidationView";
 import { IntakeForm } from "../inventory/IntakeForm";
 import { ReportsView } from "../reports/ReportsView";
@@ -14,7 +14,7 @@ export const Shell: React.FC = () => {
   const renderTab = () => {
     switch (activeTab) {
       case "MASTER":
-        return <MasterGrid />;
+        return <InventoryWorkspace />;
       case "MAIN":
         return <MainValidationView />;
       case "INTAKE":
