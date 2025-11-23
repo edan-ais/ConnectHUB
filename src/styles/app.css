@@ -1,550 +1,399 @@
-/* -------------------------------------------------------------
-   GLOBAL BASE
--------------------------------------------------------------- */
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
-
-body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  background: #f3f4f6;
-  color: #111827;
-  -webkit-font-smoothing: antialiased;
-}
-
-.app-root {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-/* -------------------------------------------------------------
-   TOP BAR & GLOBAL SEARCH
--------------------------------------------------------------- */
-
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 18px;
-  background: #111827;
-  color: #f9fafb;
-  gap: 14px;
-  border-bottom: 1px solid #1f2937;
-}
-
-.topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.topbar-title {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.topbar-center {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  flex: 1;
-}
-
-.topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(249, 250, 251, 0.25);
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-/* global search lives in topbar only */
-.topbar-search {
-  display: flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid #374151;
-  background: #1f2937;
-  gap: 6px;
-}
-
-.topbar-search-input {
-  border: none;
-  outline: none;
-  background: transparent;
-  color: #f9fafb;
-  font-size: 13px;
-  width: 220px;
-}
-
-.topbar-search-input::placeholder {
-  color: #9ca3af;
-}
-
-/* -------------------------------------------------------------
-   PILLS
--------------------------------------------------------------- */
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: 999px;
-  padding: 4px 11px;
-  font-size: 11px;
-  border: 1px solid transparent;
-}
-
-.pill-green {
-  background: #dcfce7;
-  color: #166534;
-  border-color: #22c55e;
-}
-
-.pill-yellow {
-  background: #fef9c3;
-  color: #854d0e;
-  border-color: #eab308;
-}
-
-.pill-red {
-  background: #fee2e2;
-  color: #b91c1c;
-  border-color: #ef4444;
-}
-
-/* -------------------------------------------------------------
-   APP CONTENT + BOTTOM TABS
--------------------------------------------------------------- */
-
-.app-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding-bottom: 60px; /* space for bottom nav */
-}
-
-.tabbar-bottom {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 6px 8px 10px;
-  background: #111827;
-  border-top: 1px solid #374151;
-  display: flex;
-  justify-content: space-around;
-  z-index: 50;
-}
-
-.tabbar-item {
-  flex: 1;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  border-radius: 12px;
-  padding: 6px 4px;
-  font-size: 11px;
-  border: none;
-  background: transparent;
-  color: #9ca3af;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.tabbar-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.tabbar-item-active {
-  background: #f9fafb;
-  color: #111827;
-}
-
-/* -------------------------------------------------------------
-   SHEET CONTAINER & TITLE
--------------------------------------------------------------- */
-
-.sheet-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.sheet-name {
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  border-bottom: 1px solid #d1d5db;
-  background: #e5e7eb;
-}
-
-.sheet-name-large {
-  font-size: 16px;
-}
-
-/* -------------------------------------------------------------
-   MASTER GRID WRAPPER (AG GRID)
--------------------------------------------------------------- */
-
-.sheet-table-wrapper {
-  flex: 1;
-  position: relative;
-  background: #ffffff;
-  overflow: hidden;
-}
-
-/* AG Grid host */
-.master-grid-theme {
-  width: 100%;
-  height: 100%;
-  /* AG Grid will handle scrollbars internally */
-}
-
-/* We rely on "ag-theme-alpine" base styles; this file only tweaks it. */
-.ag-theme-alpine.master-grid-theme {
-  --ag-font-size: 13px;
-  --ag-header-height: 32px;
-  --ag-row-height: 36px;
-  --ag-header-foreground-color: #111827;
-  --ag-header-background-color: #f3f4f6;
-  --ag-border-color: #d1d5db;
-  --ag-data-color: #111827;
-  --ag-row-border-color: #e5e7eb;
-}
-
-/* Make sure grid uses wrapped text instead of truncation */
-.ag-theme-alpine.master-grid-theme .ag-header-cell-label {
-  white-space: normal;
-  line-height: 1.2;
-  align-items: flex-start;
-}
-
-.ag-theme-alpine.master-grid-theme .ag-header-cell-text {
-  white-space: normal;
-}
-
-/* Body cells wrap as well */
-.ag-theme-alpine.master-grid-theme .ag-cell {
-  white-space: normal;
-  line-height: 1.3;
-}
-
-/* Slightly stronger grid lines */
-.ag-theme-alpine.master-grid-theme .ag-root-wrapper,
-.ag-theme-alpine.master-grid-theme .ag-root-wrapper-body,
-.ag-theme-alpine.master-grid-theme .ag-header,
-.ag-theme-alpine.master-grid-theme .ag-body-viewport {
-  border-color: #d1d5db;
-}
-
-/* -------------------------------------------------------------
-   GROUP HEADERS (Core / Inventory / Classification / etc.)
-   Color-coded, second header row is sticky via AG Grid.
--------------------------------------------------------------- */
-
-.header-group-cell {
-  font-size: 12px;
-  font-weight: 600;
-  text-align: center;
-  border-bottom: 2px solid #9ca3af;
-}
-
-/* Core group (above Status + Product Name pinned columns) */
-.header-group-core {
-  background: #dbeafe; /* soft blue */
-}
-
-/* Inventory group */
-.header-group-inventory {
-  background: #dcfce7; /* soft green */
-}
-
-/* Classification group */
-.header-group-classification {
-  background: #ede9fe; /* soft purple */
-}
-
-/* Variants group */
-.header-group-variants {
-  background: #fef9c3; /* soft yellow */
-}
-
-/* Shopify group */
-.header-group-shopify {
-  background: #ffedd5; /* soft orange */
-}
-
-/* Pricing & Accounts group */
-.header-group-pricing-accounts {
-  background: #fee2e2; /* soft red */
-}
-
-/* Tax & Weight group */
-.header-group-tax-weight {
-  background: #e0f2fe; /* soft sky */
-}
-
-/* Fulfillment group */
-.header-group-fulfillment {
-  background: #ccfbf1; /* soft teal */
-}
-
-/* Stock Alerts group */
-.header-group-stock-alerts {
-  background: #fef3c7; /* soft amber */
-}
-
-/* Quantities group */
-.header-group-quantities {
-  background: #e5e7eb; /* neutral */
-}
-
-/* Identifiers group */
-.header-group-identifiers {
-  background: #fce7f3; /* soft pink */
-}
-
-/* Integrations / SEO group */
-.header-group-integrations-seo {
-  background: #e0e7ff; /* soft indigo */
-}
-
-/* Lifecycle group */
-.header-group-lifecycle {
-  background: #e5e7eb; /* neutral */
-}
-
-/* -------------------------------------------------------------
-   HEADER & CELL STYLING
--------------------------------------------------------------- */
-
-.master-header-cell {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.master-cell {
-  font-size: 13px;
-}
-
-/* Status + Product cells on left should feel "frozen" */
-.master-cell-status {
-  font-weight: 600;
-}
-
-.master-cell-product {
-  font-weight: 500;
-}
-
-/* Mini image previews */
-.master-mini-image {
-  width: 34px;
-  height: 34px;
-  object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  background: #e5e7eb;
-}
-
-/* -------------------------------------------------------------
-   ROW COLOR STATES (Approved / Pending / Missing)
--------------------------------------------------------------- */
-
-.master-row-approved .ag-cell {
-  background-color: #dcfce7;
-}
-
-.master-row-pending .ag-cell {
-  background-color: #fef9c3;
-}
-
-.master-row-missing .ag-cell {
-  background-color: #fee2e2;
-}
-
-/* Hover on any row */
-.ag-theme-alpine.master-grid-theme .ag-row-hover .ag-cell {
-  background-color: #f9fafb !important;
-}
-
-/* -------------------------------------------------------------
-   FILTER MENU (CUSTOM OVERLAY)
-   (Used if/when you decide to render our custom FilterMenu; AG Grid
-    still has its own column menus built-in.)
--------------------------------------------------------------- */
-
-.filter-menu {
-  position: absolute;
-  z-index: 3000;
-  min-width: 240px;
-  max-width: 320px;
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.25);
-  animation: filter-menu-fade 0.15s ease-out;
-}
-
-@keyframes filter-menu-fade {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.filter-menu-section {
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.filter-menu-button {
-  width: 100%;
-  padding: 8px 10px;
-  font-size: 13px;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.12s ease, border-color 0.12s ease;
-}
-
-.filter-menu-button:hover {
-  background: #f3f4f6;
-}
-
-.filter-menu-button-active {
-  border-color: #2563eb;
-  background: #eff6ff;
-}
-
-.filter-menu-divider {
-  border-bottom: 1px solid #e5e7eb;
-  margin: 4px 0;
-}
-
-.filter-menu-values {
-  max-height: 230px;
-  overflow-y: auto;
-  padding: 4px 10px 0;
-}
-
-.filter-menu-checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 4px;
-  font-size: 13px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.filter-menu-checkbox-row:hover {
-  background: #f3f4f6;
-}
-
-.filter-menu-checkbox-row input {
-  width: 16px;
-  height: 16px;
-  accent-color: #2563eb;
-  cursor: pointer;
-}
-
-.filter-menu-footer {
-  display: flex;
-  gap: 8px;
-  padding: 8px;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
-  border-radius: 0 0 8px 8px;
-}
-
-.filter-menu-footer-button {
-  flex: 1;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
-}
-
-.filter-menu-footer-button:hover {
-  background: #e5e7eb;
-}
-
-.filter-menu-footer-button-primary {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #ffffff;
-}
-
-.filter-menu-footer-button-primary:hover {
-  background: #1d4ed8;
-}
-
-/* -------------------------------------------------------------
-   EMPTY STATE
--------------------------------------------------------------- */
-
-.empty-state {
-  text-align: center;
-  padding: 40px 20px;
-  font-size: 15px;
-  color: #6b7280;
-}
-
-/* -------------------------------------------------------------
-   SIMPLE FADE-IN ANIMATION
--------------------------------------------------------------- */
-
-.fade-in {
-  animation: fadein 0.25s ease-in;
-}
-
-@keyframes fadein {
-  from {
-    opacity: 0;
-    transform: translateY(3px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Search, RefreshCw, Package, FileText, ClipboardList, BarChart3, Plus, Check, AlertTriangle, X, Filter } from 'lucide-react';
+
+const initialProducts = [
+  { id: 1, sku: 'SKU-001', name: 'Organic Green Tea', category: 'Beverages', price: 12.99, stock: 150, status: 'approved', image: null, description: 'Premium organic green tea leaves', locations: ['Warehouse A', 'Store 1'] },
+  { id: 2, sku: 'SKU-002', name: 'Almond Butter', category: 'Spreads', price: 8.49, stock: 0, status: 'missing', image: null, description: '', locations: [] },
+  { id: 3, sku: 'SKU-003', name: 'Quinoa Crackers', category: 'Snacks', price: 5.99, stock: 45, status: 'pending', image: null, description: 'Gluten-free quinoa crackers', locations: ['Warehouse B'] },
+  { id: 4, sku: 'SKU-004', name: 'Coconut Oil', category: 'Oils', price: 14.99, stock: 200, status: 'approved', image: null, description: 'Cold-pressed virgin coconut oil', locations: ['Warehouse A', 'Store 2', 'Store 3'] },
+  { id: 5, sku: 'SKU-005', name: 'Oat Milk', category: 'Beverages', price: 4.99, stock: 12, status: 'pending', image: null, description: 'Unsweetened oat milk', locations: ['Store 1'] },
+];
+
+const styles = `
+*,*::before,*::after { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f4f6; color: #111827; }
+.app-root { display: flex; flex-direction: column; height: 100vh; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #111827; color: #f9fafb; gap: 12px; }
+.topbar-left { display: flex; align-items: center; gap: 8px; }
+.topbar-title { font-size: 14px; font-weight: 600; }
+.topbar-center { display: flex; gap: 8px; justify-content: center; flex: 1; }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.btn-ghost { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(249, 250, 251, 0.25); background: transparent; color: inherit; cursor: pointer; font-size: 12px; }
+.topbar-search { display: flex; align-items: center; border-radius: 999px; background: #1f2937; border: 1px solid #374151; padding: 2px 8px; gap: 6px; }
+.topbar-search-input { border: none; outline: none; background: transparent; color: #f9fafb; font-size: 12px; width: 160px; }
+.topbar-search-input::placeholder { color: #9ca3af; }
+.pill { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 10px; font-size: 11px; border: 1px solid transparent; }
+.pill-green { background: #dcfce7; color: #166534; border-color: #22c55e; }
+.pill-yellow { background: #fef9c3; color: #854d0e; border-color: #eab308; }
+.pill-red { background: #fee2e2; color: #b91c1c; border-color: #ef4444; }
+.app-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 56px; }
+.tabbar-bottom { position: fixed; bottom: 0; left: 0; right: 0; padding: 6px 8px 8px; background: #111827; border-top: 1px solid #374151; display: flex; justify-content: space-around; z-index: 10; }
+.tabbar-item { flex: 1; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 999px; padding: 4px 4px; font-size: 10px; border: none; background: transparent; color: #9ca3af; cursor: pointer; }
+.tabbar-item-active { background: #f9fafb; color: #111827; }
+.sheet-container { display: flex; flex-direction: column; height: 100%; }
+.sheet-name { padding: 6px 12px; font-size: 12px; font-weight: 600; border-bottom: 1px solid #d1d5db; background: #e5e7eb; }
+.sheet-table-wrapper { flex: 1; overflow: auto; background: white; }
+.sheet-table { border-collapse: collapse; width: 100%; min-width: 1000px; table-layout: auto; }
+.sheet-table th, .sheet-table td { border: 1px solid #d1d5db; padding: 4px 6px; font-size: 12px; }
+.sheet-table th { background: #f3f4f6; font-weight: 600; text-align: right; position: relative; user-select: none; white-space: nowrap; }
+.th-content { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.header-group-row th { text-align: center; font-size: 11px; background: #e5e7eb; }
+.master-row.row-status-approved { background: #dcfce7; }
+.master-row.row-status-pending { background: #fef9c3; }
+.master-row.row-status-missing { background: #fee2e2; }
+.sheet-table-master .col-sticky { position: sticky; left: 0; z-index: 3; background: inherit; }
+.sheet-table-master .col-sticky + .col-sticky { left: 140px; }
+.sheet-table-master th { resize: horizontal; overflow: hidden; min-width: 60px; }
+.cell-wrap { white-space: normal; word-break: break-word; }
+.mini-image { width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #d1d5db; background: #e5e7eb; }
+.cell-input { width: 100%; border: none; outline: none; font-size: 12px; font-family: inherit; padding: 2px 4px; background: transparent; }
+.cell-input:focus { outline: 1px solid #3b82f6; background: #eff6ff; }
+.cell-number { text-align: right; }
+.filter-button { margin-left: 6px; background: transparent; border: none; cursor: pointer; padding: 2px; color: #9ca3af; display: inline-flex; align-items: center; border-radius: 2px; flex-shrink: 0; }
+.filter-button:hover { color: #374151; background: rgba(0,0,0,0.05); }
+.filter-button.active { color: #3b82f6; background: rgba(59,130,246,0.1); }
+.filter-menu { position: absolute; bottom: 100%; right: 0; margin-bottom: 4px; background: white; border: 1px solid #d1d5db; z-index: 100; min-width: 200px; padding: 8px; border-radius: 6px; box-shadow: 0 -4px 12px rgba(0,0,0,0.15); }
+.filter-search-input { width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; outline: none; margin-bottom: 8px; }
+.filter-search-input:focus { border-color: #3b82f6; }
+.filter-value-list { max-height: 150px; overflow-y: auto; }
+.filter-checkbox-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; cursor: pointer; }
+.filter-checkbox-row input { margin: 0; cursor: pointer; }
+.filter-actions { display: flex; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; }
+.filter-action-btn { flex: 1; padding: 4px 8px; font-size: 11px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer; }
+.filter-action-btn:hover { background: #f3f4f6; }
+.card-grid { padding: 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; overflow: auto; }
+.card { background: white; border-radius: 6px; border: 1px solid #d1d5db; display: flex; flex-direction: column; }
+.card-header { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
+.card-title { font-size: 13px; font-weight: 600; }
+.card-subtitle { font-size: 11px; color: #6b7280; }
+.card-body { padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+.field-label { font-size: 11px; color: #4b5563; }
+.card-footer { padding: 6px 8px; border-top: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+.btn-primary { border: none; border-radius: 4px; background: #16a34a; color: white; font-size: 12px; padding: 4px 10px; cursor: pointer; display: inline-flex; align-items: center; }
+.btn-primary:hover { background: #15803d; }
+.intake-form { padding: 8px; background: white; height: 100%; display: flex; flex-direction: column; }
+.intake-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.intake-grid label { font-size: 11px; display: flex; flex-direction: column; gap: 3px; }
+.intake-span-2 { grid-column: span 2; }
+.intake-footer { margin-top: 8px; display: flex; align-items: center; gap: 10px; }
+.report-grid { padding: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+.report-card { background: white; border-radius: 6px; border: 1px solid #d1d5db; padding: 8px; min-width: 120px; }
+.report-label { font-size: 11px; color: #4b5563; }
+.report-value { font-size: 16px; font-weight: 600; }
+.fade-in { animation: fadein 0.25s ease-in; }
+@keyframes fadein { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+`;
+
+// Separate FilterDropdown component defined outside
+function FilterDropdown({ values, selected, onToggle, onSelectAll, onClear, onClose }) {
+  const [search, setSearch] = useState('');
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [onClose]);
+
+  const filtered = values.filter(v => String(v).toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div className="filter-menu" ref={menuRef} onClick={e => e.stopPropagation()}>
+      <input
+        type="text"
+        className="filter-search-input"
+        placeholder="Search..."
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+      />
+      <div className="filter-actions" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none', marginBottom: 8 }}>
+        <button className="filter-action-btn" onClick={onSelectAll}>All</button>
+        <button className="filter-action-btn" onClick={onClear}>Clear</button>
+      </div>
+      <div className="filter-value-list">
+        {filtered.map(val => (
+          <label key={String(val)} className="filter-checkbox-row">
+            <input
+              type="checkbox"
+              checked={selected.includes(val)}
+              onChange={() => onToggle(val)}
+            />
+            <span>{String(val)}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function ProductValidationApp() {
+  const [activeTab, setActiveTab] = useState('master');
+  const [products, setProducts] = useState(initialProducts);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState({});
+  const [openFilter, setOpenFilter] = useState(null);
+
+  const columns = [
+    { key: 'sku', label: 'SKU', width: 100 },
+    { key: 'name', label: 'Name', width: 140 },
+    { key: 'category', label: 'Category', width: 100 },
+    { key: 'image', label: 'Image', width: 60 },
+    { key: 'description', label: 'Description', width: 200 },
+    { key: 'price', label: 'Price', width: 80 },
+    { key: 'stock', label: 'Stock', width: 80 },
+    { key: 'status', label: 'Status', width: 100 },
+  ];
+
+  const getUniqueValues = useCallback((field) => {
+    const vals = products.map(p => p[field]).filter(v => v !== null && v !== undefined && v !== '');
+    return [...new Set(vals)];
+  }, [products]);
+
+  const handleFilterToggle = useCallback((col, val) => {
+    setFilters(prev => {
+      const current = prev[col] || [];
+      const newVals = current.includes(val)
+        ? current.filter(v => v !== val)
+        : [...current, val];
+      return { ...prev, [col]: newVals };
+    });
+  }, []);
+
+  const handleSelectAll = useCallback((col) => {
+    const allVals = getUniqueValues(col);
+    setFilters(prev => ({ ...prev, [col]: allVals }));
+  }, [getUniqueValues]);
+
+  const handleClear = useCallback((col) => {
+    setFilters(prev => ({ ...prev, [col]: [] }));
+  }, []);
+
+  const filteredProducts = products.filter(p => {
+    const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        p.sku.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchFilters = Object.entries(filters).every(([col, vals]) =>
+      vals.length === 0 || vals.includes(p[col])
+    );
+    return matchSearch && matchFilters;
+  });
+
+  const stats = {
+    total: products.length,
+    approved: products.filter(p => p.status === 'approved').length,
+    pending: products.filter(p => p.status === 'pending').length,
+    missing: products.filter(p => p.status === 'missing').length,
+  };
+
+  const updateProduct = (id, field, value) => {
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+  };
+
+  const getStatusIcon = (status) => {
+    if (status === 'approved') return <Check size={12} />;
+    if (status === 'pending') return <AlertTriangle size={12} />;
+    if (status === 'missing') return <X size={12} />;
+    return null;
+  };
+
+  const renderHeaderCell = (col, idx) => {
+    const isOpen = openFilter === col.key;
+    const hasFilter = (filters[col.key] || []).length > 0;
+    const uniqueVals = getUniqueValues(col.key);
+    const showFilter = uniqueVals.length > 0 && col.key !== 'image';
+
+    return (
+      <th key={col.key} style={{ width: col.width, minWidth: col.width }}>
+        <div className="th-content">
+          <span>{col.label}</span>
+          {showFilter && (
+            <button
+              className={`filter-button ${hasFilter ? 'active' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenFilter(isOpen ? null : col.key);
+              }}
+            >
+              <Filter size={12} />
+            </button>
+          )}
+        </div>
+        {isOpen && showFilter && (
+          <FilterDropdown
+            values={uniqueVals}
+            selected={filters[col.key] || []}
+            onToggle={(val) => handleFilterToggle(col.key, val)}
+            onSelectAll={() => handleSelectAll(col.key)}
+            onClear={() => handleClear(col.key)}
+            onClose={() => setOpenFilter(null)}
+          />
+        )}
+      </th>
+    );
+  };
+
+  return (
+    <>
+      <style>{styles}</style>
+      <div className="app-root">
+        <div className="topbar">
+          <div className="topbar-left">
+            <Package size={20} />
+            <span className="topbar-title">Product Validation</span>
+          </div>
+          <div className="topbar-center">
+            <span className="pill pill-green">{stats.approved} Approved</span>
+            <span className="pill pill-yellow">{stats.pending} Pending</span>
+            <span className="pill pill-red">{stats.missing} Missing</span>
+          </div>
+          <div className="topbar-right">
+            <div className="topbar-search">
+              <Search size={14} style={{ opacity: 0.7 }} />
+              <input
+                type="text"
+                className="topbar-search-input"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <button className="btn-ghost">
+              <RefreshCw size={14} />
+              Sync
+            </button>
+          </div>
+        </div>
+
+        <div className="app-content">
+          {activeTab === 'master' && (
+            <div className="sheet-container fade-in">
+              <div className="sheet-name">Master Product List</div>
+              <div className="sheet-table-wrapper">
+                <table className="sheet-table sheet-table-master">
+                  <thead>
+                    <tr className="header-group-row">
+                      <th colSpan={2}>Identity</th>
+                      <th colSpan={3}>Product Info</th>
+                      <th colSpan={2}>Inventory</th>
+                      <th>Status</th>
+                    </tr>
+                    <tr>
+                      {columns.map((col, idx) => renderHeaderCell(col, idx))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map(product => (
+                      <tr key={product.id} className={`master-row row-status-${product.status}`}>
+                        <td style={{ background: 'inherit' }}>
+                          <input type="text" className="cell-input" value={product.sku} onChange={(e) => updateProduct(product.id, 'sku', e.target.value)} />
+                        </td>
+                        <td style={{ background: 'inherit' }}>
+                          <input type="text" className="cell-input" value={product.name} onChange={(e) => updateProduct(product.id, 'name', e.target.value)} />
+                        </td>
+                        <td>
+                          <input type="text" className="cell-input" value={product.category} onChange={(e) => updateProduct(product.id, 'category', e.target.value)} />
+                        </td>
+                        <td>
+                          {product.image ? (
+                            <img src={product.image} alt="" className="mini-image" />
+                          ) : (
+                            <div className="mini-image" style={{ background: 'repeating-linear-gradient(-45deg, #e5e7eb, #e5e7eb 4px, #f9fafb 4px, #f9fafb 8px)' }} />
+                          )}
+                        </td>
+                        <td className="cell-wrap">
+                          <input type="text" className="cell-input" value={product.description} onChange={(e) => updateProduct(product.id, 'description', e.target.value)} placeholder="Add description..." />
+                        </td>
+                        <td>
+                          <input type="number" className="cell-input cell-number" value={product.price} onChange={(e) => updateProduct(product.id, 'price', parseFloat(e.target.value) || 0)} />
+                        </td>
+                        <td>
+                          <input type="number" className="cell-input cell-number" value={product.stock} onChange={(e) => updateProduct(product.id, 'stock', parseInt(e.target.value) || 0)} />
+                        </td>
+                        <td>
+                          <select className="cell-input" value={product.status} onChange={(e) => updateProduct(product.id, 'status', e.target.value)}>
+                            <option value="approved">Approved</option>
+                            <option value="pending">Pending</option>
+                            <option value="missing">Missing</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'validate' && (
+            <div className="card-grid fade-in">
+              {filteredProducts.filter(p => p.status !== 'approved').map(product => (
+                <div key={product.id} className="card">
+                  <div className="card-header">
+                    <div className="card-title">{product.name}</div>
+                    <div className="card-subtitle">{product.sku} • {product.category}</div>
+                  </div>
+                  <div className="card-body">
+                    <div className="field-label">Description</div>
+                    <div style={{ fontSize: 12 }}>{product.description || 'No description'}</div>
+                    <div className="field-label" style={{ marginTop: 4 }}>Locations ({product.locations.length})</div>
+                    <div style={{ fontSize: 12 }}>{product.locations.length > 0 ? product.locations.join(', ') : 'No locations assigned'}</div>
+                  </div>
+                  <div className="card-footer">
+                    <span className={`pill pill-${product.status === 'pending' ? 'yellow' : 'red'}`}>
+                      {getStatusIcon(product.status)}
+                      {product.status}
+                    </span>
+                    <button className="btn-primary" onClick={() => updateProduct(product.id, 'status', 'approved')}>
+                      <Check size={12} style={{ marginRight: 4 }} />
+                      Approve
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'intake' && (
+            <div className="intake-form fade-in">
+              <h3 style={{ margin: '0 0 8px', fontSize: 14 }}>Add New Product</h3>
+              <div className="intake-grid">
+                <label>SKU<input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} /></label>
+                <label>Product Name<input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} /></label>
+                <label>Category<input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} /></label>
+                <label>Price<input type="number" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} /></label>
+                <label className="intake-span-2">Description<textarea className="cell-input" rows={3} style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} /></label>
+              </div>
+              <div className="intake-footer">
+                <button className="btn-primary"><Plus size={12} style={{ marginRight: 4 }} />Add Product</button>
+                <span style={{ fontSize: 11, color: '#6b7280' }}>Product will be added with "Pending" status</span>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'reports' && (
+            <div className="fade-in">
+              <div className="report-grid">
+                <div className="report-card"><div className="report-label">Total Products</div><div className="report-value">{stats.total}</div></div>
+                <div className="report-card"><div className="report-label">Approved</div><div className="report-value" style={{ color: '#16a34a' }}>{stats.approved}</div></div>
+                <div className="report-card"><div className="report-label">Pending Review</div><div className="report-value" style={{ color: '#ca8a04' }}>{stats.pending}</div></div>
+                <div className="report-card"><div className="report-label">Missing Data</div><div className="report-value" style={{ color: '#dc2626' }}>{stats.missing}</div></div>
+                <div className="report-card"><div className="report-label">Completion Rate</div><div className="report-value">{Math.round((stats.approved / stats.total) * 100)}%</div></div>
+              </div>
+              <div style={{ padding: '0 10px', fontSize: 11, color: '#6b7280' }}>Last synced: Today at 2:34 PM</div>
+            </div>
+          )}
+        </div>
+
+        <div className="tabbar-bottom">
+          <button className={`tabbar-item ${activeTab === 'master' ? 'tabbar-item-active' : ''}`} onClick={() => setActiveTab('master')}><FileText size={18} />Master</button>
+          <button className={`tabbar-item ${activeTab === 'validate' ? 'tabbar-item-active' : ''}`} onClick={() => setActiveTab('validate')}><ClipboardList size={18} />Validate</button>
+          <button className={`tabbar-item ${activeTab === 'intake' ? 'tabbar-item-active' : ''}`} onClick={() => setActiveTab('intake')}><Plus size={18} />Intake</button>
+          <button className={`tabbar-item ${activeTab === 'reports' ? 'tabbar-item-active' : ''}`} onClick={() => setActiveTab('reports')}><BarChart3 size={18} />Reports</button>
+        </div>
+      </div>
+    </>
+  );
 }
