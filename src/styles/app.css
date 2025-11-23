@@ -1,14 +1,21 @@
-/* ============================================================
-   GLOBAL RESET + BASE
-   ============================================================ */
+/* -------------------------------------------------------------
+   GLOBAL BASE
+-------------------------------------------------------------- */
+
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
   background: #f3f4f6;
@@ -19,13 +26,13 @@ body {
 .app-root {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
 }
 
+/* -------------------------------------------------------------
+   TOP BAR & GLOBAL SEARCH
+-------------------------------------------------------------- */
 
-/* ============================================================
-   TOP BAR
-   ============================================================ */
 .topbar {
   display: flex;
   align-items: center;
@@ -74,14 +81,14 @@ body {
   font-size: 12px;
 }
 
-/* Global search bar (only in topbar) */
+/* global search lives in topbar only */
 .topbar-search {
   display: flex;
   align-items: center;
-  border-radius: 999px;
-  background: #1f2937;
-  border: 1px solid #374151;
   padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #374151;
+  background: #1f2937;
   gap: 6px;
 }
 
@@ -98,10 +105,10 @@ body {
   color: #9ca3af;
 }
 
+/* -------------------------------------------------------------
+   PILLS
+-------------------------------------------------------------- */
 
-/* ============================================================
-   PILLS (Approved / Needs Approval cards, etc.)
-   ============================================================ */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -130,22 +137,18 @@ body {
   border-color: #ef4444;
 }
 
+/* -------------------------------------------------------------
+   APP CONTENT + BOTTOM TABS
+-------------------------------------------------------------- */
 
-/* ============================================================
-   APP CONTENT
-   ============================================================ */
 .app-content {
   flex: 1;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding-bottom: 60px; /* space for bottom tab bar */
+  overflow: hidden;
+  padding-bottom: 60px; /* space for bottom nav */
 }
 
-
-/* ============================================================
-   BOTTOM TABBAR (mobile-style)
-   ============================================================ */
 .tabbar-bottom {
   position: fixed;
   bottom: 0;
@@ -185,10 +188,10 @@ body {
   color: #111827;
 }
 
+/* -------------------------------------------------------------
+   SHEET CONTAINER & TITLE
+-------------------------------------------------------------- */
 
-/* ============================================================
-   SHEET CONTAINER + TITLE
-   ============================================================ */
 .sheet-container {
   display: flex;
   flex-direction: column;
@@ -207,195 +210,210 @@ body {
   font-size: 16px;
 }
 
+/* -------------------------------------------------------------
+   MASTER GRID WRAPPER (AG GRID)
+-------------------------------------------------------------- */
 
-/* ============================================================
-   SHEET TABLE WRAPPER
-   ============================================================ */
 .sheet-table-wrapper {
   flex: 1;
-  overflow: auto;
+  position: relative;
   background: #ffffff;
-  position: relative;
-  scrollbar-width: thin;
+  overflow: hidden;
 }
 
-.wide-scroll {
-  overflow-x: auto;
-  overflow-y: auto;
-  max-width: 100%;
-}
-
-
-/* ============================================================
-   MASTER TABLE
-   ============================================================ */
-.sheet-table {
-  border-collapse: collapse;
+/* AG Grid host */
+.master-grid-theme {
   width: 100%;
-  min-width: 1400px;
-  table-layout: auto;
+  height: 100%;
+  /* AG Grid will handle scrollbars internally */
 }
 
-.sheet-table th,
-.sheet-table td {
-  border: 1px solid #d1d5db;
-  padding: 8px 10px;
-  font-size: 14px;
-  line-height: 1.35;
-  background-clip: padding-box;
-  white-space: normal;   /* allow wrapping */
-  word-break: break-word;
+/* We rely on "ag-theme-alpine" base styles; this file only tweaks it. */
+.ag-theme-alpine.master-grid-theme {
+  --ag-font-size: 13px;
+  --ag-header-height: 32px;
+  --ag-row-height: 36px;
+  --ag-header-foreground-color: #111827;
+  --ag-header-background-color: #f3f4f6;
+  --ag-border-color: #d1d5db;
+  --ag-data-color: #111827;
+  --ag-row-border-color: #e5e7eb;
 }
 
-/* Column header row */
-.sheet-table th {
-  background: #f3f4f6;
-  font-weight: 600;
-  text-align: right;
-  position: relative;
-  user-select: none;
-  vertical-align: top;
+/* Make sure grid uses wrapped text instead of truncation */
+.ag-theme-alpine.master-grid-theme .ag-header-cell-label {
+  white-space: normal;
+  line-height: 1.2;
+  align-items: flex-start;
 }
 
-/* Group header row (secondary headers like Core, Inventory, etc.) */
-.header-group-row th {
+.ag-theme-alpine.master-grid-theme .ag-header-cell-text {
+  white-space: normal;
+}
+
+/* Body cells wrap as well */
+.ag-theme-alpine.master-grid-theme .ag-cell {
+  white-space: normal;
+  line-height: 1.3;
+}
+
+/* Slightly stronger grid lines */
+.ag-theme-alpine.master-grid-theme .ag-root-wrapper,
+.ag-theme-alpine.master-grid-theme .ag-root-wrapper-body,
+.ag-theme-alpine.master-grid-theme .ag-header,
+.ag-theme-alpine.master-grid-theme .ag-body-viewport {
+  border-color: #d1d5db;
+}
+
+/* -------------------------------------------------------------
+   GROUP HEADERS (Core / Inventory / Classification / etc.)
+   Color-coded, second header row is sticky via AG Grid.
+-------------------------------------------------------------- */
+
+.header-group-cell {
   font-size: 12px;
+  font-weight: 600;
   text-align: center;
   border-bottom: 2px solid #9ca3af;
 }
 
-/* Make group header row sticky at the top */
-.header-group-row th {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-/* Column header row just below group headers, also sticky */
-.column-header-row th {
-  position: sticky;
-  top: 32px; /* approximate height of group header row */
-  z-index: 9;
-}
-
-/* Base styling for group header cells */
-.header-group-cell {
-  padding: 6px 10px;
-}
-
-/* Color-coded group headers */
+/* Core group (above Status + Product Name pinned columns) */
 .header-group-core {
   background: #dbeafe; /* soft blue */
 }
 
+/* Inventory group */
 .header-group-inventory {
   background: #dcfce7; /* soft green */
 }
 
+/* Classification group */
 .header-group-classification {
   background: #ede9fe; /* soft purple */
 }
 
+/* Variants group */
 .header-group-variants {
   background: #fef9c3; /* soft yellow */
 }
 
+/* Shopify group */
 .header-group-shopify {
   background: #ffedd5; /* soft orange */
 }
 
+/* Pricing & Accounts group */
 .header-group-pricing-accounts {
   background: #fee2e2; /* soft red */
 }
 
+/* Tax & Weight group */
 .header-group-tax-weight {
   background: #e0f2fe; /* soft sky */
 }
 
+/* Fulfillment group */
 .header-group-fulfillment {
   background: #ccfbf1; /* soft teal */
 }
 
+/* Stock Alerts group */
 .header-group-stock-alerts {
   background: #fef3c7; /* soft amber */
 }
 
+/* Quantities group */
 .header-group-quantities {
   background: #e5e7eb; /* neutral */
 }
 
+/* Identifiers group */
 .header-group-identifiers {
   background: #fce7f3; /* soft pink */
 }
 
+/* Integrations / SEO group */
 .header-group-integrations-seo {
   background: #e0e7ff; /* soft indigo */
 }
 
+/* Lifecycle group */
 .header-group-lifecycle {
   background: #e5e7eb; /* neutral */
 }
 
+/* -------------------------------------------------------------
+   HEADER & CELL STYLING
+-------------------------------------------------------------- */
 
-/* ============================================================
-   HEADER CELL + FILTER BUTTON
-   ============================================================ */
-.header-cell {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  position: relative;
-}
-
-.header-label {
+.master-header-cell {
   font-size: 13px;
   font-weight: 600;
 }
 
-/* Filter button */
-.filter-button {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 4px 5px;
-  color: #9ca3af;
-  border-radius: 4px;
-  transition: 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.master-cell {
+  font-size: 13px;
 }
 
-.filter-button:hover {
-  background: rgba(0, 0, 0, 0.08);
-  color: #374151;
+/* Status + Product cells on left should feel "frozen" */
+.master-cell-status {
+  font-weight: 600;
 }
 
-.filter-button.active {
-  background: rgba(59, 130, 246, 0.18);
-  color: #2563eb;
+.master-cell-product {
+  font-weight: 500;
 }
 
+/* Mini image previews */
+.master-mini-image {
+  width: 34px;
+  height: 34px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #e5e7eb;
+}
 
-/* ============================================================
-   FILTER DROPDOWN MENU
-   ============================================================ */
+/* -------------------------------------------------------------
+   ROW COLOR STATES (Approved / Pending / Missing)
+-------------------------------------------------------------- */
+
+.master-row-approved .ag-cell {
+  background-color: #dcfce7;
+}
+
+.master-row-pending .ag-cell {
+  background-color: #fef9c3;
+}
+
+.master-row-missing .ag-cell {
+  background-color: #fee2e2;
+}
+
+/* Hover on any row */
+.ag-theme-alpine.master-grid-theme .ag-row-hover .ag-cell {
+  background-color: #f9fafb !important;
+}
+
+/* -------------------------------------------------------------
+   FILTER MENU (CUSTOM OVERLAY)
+   (Used if/when you decide to render our custom FilterMenu; AG Grid
+    still has its own column menus built-in.)
+-------------------------------------------------------------- */
+
 .filter-menu {
   position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+  z-index: 3000;
   min-width: 240px;
   max-width: 320px;
-  z-index: 2000;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
   box-shadow: 0 6px 20px rgba(15, 23, 42, 0.25);
-  animation: dropdown-fade 0.15s ease-out;
+  animation: filter-menu-fade 0.15s ease-out;
 }
 
-@keyframes dropdown-fade {
+@keyframes filter-menu-fade {
   from {
     opacity: 0;
     transform: translateY(-4px);
@@ -406,63 +424,67 @@ body {
   }
 }
 
-.filter-section {
+.filter-menu-section {
   padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.filter-section button {
+.filter-menu-button {
+  width: 100%;
   padding: 8px 10px;
   font-size: 13px;
-  width: 100%;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
   border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
   cursor: pointer;
   text-align: left;
-  transition: background 0.12s ease;
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
 
-.filter-section button:hover {
+.filter-menu-button:hover {
   background: #f3f4f6;
 }
 
-.filter-divider {
+.filter-menu-button-active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.filter-menu-divider {
   border-bottom: 1px solid #e5e7eb;
   margin: 4px 0;
 }
 
-.filter-value-list {
+.filter-menu-values {
   max-height: 230px;
   overflow-y: auto;
-  padding: 6px 10px 0;
+  padding: 4px 10px 0;
 }
 
-.filter-checkbox-row {
+.filter-menu-checkbox-row {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 6px 4px;
-  cursor: pointer;
   font-size: 13px;
   border-radius: 4px;
+  cursor: pointer;
 }
 
-.filter-checkbox-row:hover {
+.filter-menu-checkbox-row:hover {
   background: #f3f4f6;
 }
 
-.filter-checkbox-row input {
+.filter-menu-checkbox-row input {
   width: 16px;
   height: 16px;
   accent-color: #2563eb;
   cursor: pointer;
 }
 
-/* Filter footer */
-.filter-actions {
+.filter-menu-footer {
   display: flex;
   gap: 8px;
   padding: 8px;
@@ -471,7 +493,7 @@ body {
   border-radius: 0 0 8px 8px;
 }
 
-.filter-action-btn {
+.filter-menu-footer-button {
   flex: 1;
   padding: 6px 10px;
   font-size: 12px;
@@ -483,200 +505,35 @@ body {
   transition: background 0.12s ease, border-color 0.12s ease;
 }
 
-.filter-action-btn:hover {
+.filter-menu-footer-button:hover {
   background: #e5e7eb;
 }
 
-.filter-action-btn.primary {
+.filter-menu-footer-button-primary {
   background: #2563eb;
   border-color: #2563eb;
   color: #ffffff;
 }
 
-.filter-action-btn.primary:hover {
+.filter-menu-footer-button-primary:hover {
   background: #1d4ed8;
 }
 
-
-/* ============================================================
-   ROWS / CELLS
-   ============================================================ */
-.master-row {
-  transition: background 0.15s ease;
-}
-
-.master-row:hover {
-  background: #f9fafb;
-}
-
-.mini-image {
-  width: 34px;
-  height: 34px;
-  object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  background: #e5e7eb;
-}
-
-.cell-input {
-  width: 100%;
-  border: none;
-  font-size: 13px;
-  padding: 2px 4px;
-  background: transparent;
-  outline: none;
-}
-
-.cell-input:focus {
-  background: #eff6ff;
-  outline: 1px solid #3b82f6;
-}
-
-
-/* ============================================================
+/* -------------------------------------------------------------
    EMPTY STATE
-   ============================================================ */
+-------------------------------------------------------------- */
+
 .empty-state {
   text-align: center;
   padding: 40px 20px;
-  color: #6b7280;
   font-size: 15px;
-}
-
-
-/* ============================================================
-   CARD GRID (for summary cards, Approved / Needs Approval)
-   ============================================================ */
-.card-grid {
-  padding: 10px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 10px;
-  overflow: auto;
-}
-
-.card {
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  display: flex;
-  flex-direction: column;
-}
-
-.card-header {
-  padding: 8px 10px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.card-title {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.card-subtitle {
-  font-size: 12px;
   color: #6b7280;
 }
 
-.card-body {
-  padding: 8px 10px;
-}
+/* -------------------------------------------------------------
+   SIMPLE FADE-IN ANIMATION
+-------------------------------------------------------------- */
 
-.card-footer {
-  padding: 8px 10px;
-  border-top: 1px solid #e5e7eb;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-
-/* ============================================================
-   INTAKE FORM
-   ============================================================ */
-.intake-form {
-  padding: 8px;
-  background: white;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.intake-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.intake-grid label {
-  font-size: 11px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.intake-span-2 {
-  grid-column: span 2;
-}
-
-.intake-footer {
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-
-/* ============================================================
-   REPORTS
-   ============================================================ */
-.report-grid {
-  padding: 10px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.report-card {
-  background: white;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  padding: 8px;
-  min-width: 120px;
-}
-
-.report-label {
-  font-size: 11px;
-  color: #4b5563;
-}
-
-.report-value {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-
-/* ============================================================
-   BUTTONS
-   ============================================================ */
-.btn-primary {
-  border: none;
-  border-radius: 4px;
-  background: #16a34a;
-  color: white;
-  font-size: 12px;
-  padding: 4px 10px;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  background: #15803d;
-}
-
-
-/* ============================================================
-   ANIMATIONS
-   ============================================================ */
 .fade-in {
   animation: fadein 0.25s ease-in;
 }
