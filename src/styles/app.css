@@ -91,7 +91,7 @@ body {
   background: transparent;
   color: #f9fafb;
   font-size: 13px;
-  width: 220px;
+  width: 200px;
 }
 
 .topbar-search-input::placeholder {
@@ -107,7 +107,7 @@ body {
   align-items: center;
   gap: 4px;
   border-radius: 999px;
-  padding: 4px 11px;
+  padding: 3px 10px;
   font-size: 11px;
   border: 1px solid transparent;
 }
@@ -232,7 +232,7 @@ body {
 .sheet-table {
   border-collapse: collapse;
   width: 100%;
-  min-width: 1400px;
+  min-width: 1200px;
   table-layout: auto;
 }
 
@@ -262,20 +262,6 @@ body {
   font-size: 12px;
   text-align: center;
   border-bottom: 2px solid #9ca3af;
-}
-
-/* Make group header row sticky at the top */
-.header-group-row th {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-/* Column header row just below group headers, also sticky */
-.column-header-row th {
-  position: sticky;
-  top: 32px; /* approximate height of group header row */
-  z-index: 9;
 }
 
 /* Base styling for group header cells */
@@ -499,6 +485,13 @@ body {
 
 
 /* ============================================================
+   STICKY COLUMNS / GROUP HEADER (Core only)
+   ============================================================ */
+/* Status + Product Name cells use inline sticky styles from TSX.
+   The Core group header cell is also made sticky via inline style. */
+
+
+/* ============================================================
    ROWS / CELLS
    ============================================================ */
 .master-row {
@@ -592,7 +585,7 @@ body {
 
 
 /* ============================================================
-   INTAKE FORM
+   INTAKE FORM (kept from original)
    ============================================================ */
 .intake-form {
   padding: 8px;
@@ -628,7 +621,7 @@ body {
 
 
 /* ============================================================
-   REPORTS
+   REPORTS (kept from original)
    ============================================================ */
 .report-grid {
   padding: 10px;
@@ -685,6 +678,17 @@ body {
   from {
     opacity: 0;
     transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dropdown-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
