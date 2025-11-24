@@ -1,7 +1,7 @@
 import React from "react";
 import { useInventoryStore } from "../../state/inventoryStore";
 import { MasterStatus } from "../../lib/types"; // we’ll define below
-import "./MasterGrid.css"; // optional extra styles or just use app.css
+import "./app.css"; // optional extra styles or just use app.css
 
 export interface MasterRow {
   id?: string;
