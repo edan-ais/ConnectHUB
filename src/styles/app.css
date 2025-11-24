@@ -100,7 +100,7 @@ body {
 
 
 /* ============================================================
-   PILLS
+   PILLS (Approved / Needs Approval cards, etc.)
    ============================================================ */
 .pill {
   display: inline-flex;
@@ -144,7 +144,7 @@ body {
 
 
 /* ============================================================
-   BOTTOM TABBAR
+   BOTTOM TABBAR (mobile-style)
    ============================================================ */
 .tabbar-bottom {
   position: fixed;
@@ -243,7 +243,7 @@ body {
   font-size: 14px;
   line-height: 1.35;
   background-clip: padding-box;
-  white-space: normal;   /* wrap, don't truncate */
+  white-space: normal;   /* allow wrapping */
   word-break: break-word;
 }
 
@@ -257,7 +257,7 @@ body {
   vertical-align: top;
 }
 
-/* Group header row (Core, Inventory, etc.) */
+/* Group header row (secondary headers like Core, Inventory, etc.) */
 .header-group-row th {
   font-size: 12px;
   text-align: center;
@@ -274,7 +274,7 @@ body {
 /* Column header row just below group headers, also sticky */
 .column-header-row th {
   position: sticky;
-  top: 32px; /* approx height of group header row */
+  top: 32px; /* approximate height of group header row */
   z-index: 9;
 }
 
@@ -545,7 +545,7 @@ body {
 
 
 /* ============================================================
-   CARD GRID
+   CARD GRID (for summary cards, Approved / Needs Approval)
    ============================================================ */
 .card-grid {
   padding: 10px;
