@@ -27,7 +27,6 @@ body {
   padding: 8px 16px;
   background: #111827;
   color: #f9fafb;
-  gap: 12px;
 }
 
 .topbar-left {
@@ -46,21 +45,28 @@ body {
   font-weight: 600;
 }
 
-/* Center pills */
+.topbar-subtitle {
+  font-size: 11px;
+  opacity: 0.8;
+}
 
 .topbar-center {
   display: flex;
   gap: 8px;
-  justify-content: center;
-  flex: 1;
 }
-
-/* Right side: search + sync */
 
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.topbar-saving {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.8;
 }
 
 .btn-ghost {
@@ -74,38 +80,6 @@ body {
   color: inherit;
   cursor: pointer;
   font-size: 12px;
-}
-
-/* Search */
-
-.topbar-search {
-  display: flex;
-  align-items: center;
-  border-radius: 999px;
-  background: #1f2937;
-  border: 1px solid #374151;
-  padding: 2px 8px;
-  gap: 6px;
-}
-
-.topbar-search-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.7;
-}
-
-.topbar-search-input {
-  border: none;
-  outline: none;
-  background: transparent;
-  color: #f9fafb;
-  font-size: 12px;
-  width: 160px;
-}
-
-.topbar-search-input::placeholder {
-  color: #9ca3af;
 }
 
 /* Pills */
@@ -150,55 +124,62 @@ body {
   border-color: #3b82f6;
 }
 
-/* App content */
-
-.app-content {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  /* make room for bottom nav */
-  padding-bottom: 56px;
-}
-
-/* Bottom tabbar (mobile-style nav) */
+/* Tabbar */
 
 .tabbar {
   display: flex;
   gap: 4px;
-}
-
-.tabbar-bottom {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 6px 8px 8px;
-  background: #111827;
-  border-top: 1px solid #374151;
-  justify-content: space-around;
-  z-index: 10;
+  padding: 4px 8px;
+  background: #1f2937;
 }
 
 .tabbar-item {
-  flex: 1;
   display: inline-flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 2px;
-  border-radius: 999px;
-  padding: 4px 4px;
-  font-size: 10px;
+  gap: 6px;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
   border: none;
   background: transparent;
-  color: #9ca3af;
+  color: #e5e7eb;
   cursor: pointer;
 }
 
 .tabbar-item-active {
   background: #f9fafb;
   color: #111827;
+}
+
+/* Content */
+
+.app-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Statusbar */
+
+.statusbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #111827;
+  color: #e5e7eb;
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.statusbar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statusbar-right {
+  opacity: 0.7;
 }
 
 /* Sheet container */
