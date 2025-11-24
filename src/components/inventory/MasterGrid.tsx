@@ -1,660 +1,425 @@
-import React, {
-  useState,
-  useMemo,
-  useRef,
-  useEffect,
-  MouseEvent as ReactMouseEvent,
-} from "react";
-import { ChevronDown } from "lucide-react";
-import { useMasterInventory } from "../../hooks/useMasterInventory";
-import "../../styles/app.css";
+import React from "react";
+import { useInventoryStore } from "../../state/inventoryStore";
+import { MasterStatus } from "../../lib/types"; // we’ll define below
+import "./MasterGrid.css"; // optional extra styles or just use app.css
 
-type SortState = { col: string; dir: "asc" | "desc" | null };
-
-type ColumnDef = {
-  key: string;
-  label: string;
-  group: string;
-  sticky?: boolean; // Status + Product Name
-  isImage?: boolean;
-};
-
-interface ColumnFilterMenuProps {
-  values: string[];
-  activeValues: string[];
-  setValues: (vals: string[]) => void;
-  sortAsc: () => void;
-  sortDesc: () => void;
-  clearSort: () => void;
-  close: () => void;
+export interface MasterRow {
+  id?: string;
+  status: MasterStatus;
+  product_name: string;
+  sku: string;
+  vendor: string | null;
+  total_inventory_on_hand: number;
+  total_inventory_on_the_way: number;
+  incoming_total: number;
+  qty_coastal_cowgirl: number;
+  qty_salty_tails: number;
+  qty_central_valley: number;
+  new_qty_coastal_cowgirl: number;
+  new_qty_salty_tails: number;
+  new_qty_central_valley: number;
+  reorder_point: number;
+  product_type: string | null;
+  product_category: string | null;
+  category: string | null;
+  reporting_category: string | null;
+  description: string | null;
+  sales_description: string | null;
+  purchase_description: string | null;
+  tags: string | null;
+  single_parent_or_variant: string | null;
+  variant_name: string | null;
+  variant_title: string | null;
+  option1_name: string | null;
+  option1_value: string | null;
+  option2_name: string | null;
+  option2_value: string | null;
+  option3_name: string | null;
+  option3_value: string | null;
+  option4_name: string | null;
+  option4_value: string | null;
+  handle: string | null;
+  permalink: string | null;
+  image_url: string | null;
+  variant_image_url: string | null;
+  square_image_id: string | null;
+  price: number | null;
+  online_price: number | null;
+  cost: number | null;
+  compare_at: number | null;
+  default_unit_cost: number | null;
+  income_account: string | null;
+  expense_account: string | null;
+  inventory_asset_account: string | null;
+  sales_tax_rate: number | null;
+  tax_code: string | null;
+  taxable: boolean | null;
+  last_delivery_date: string | null;
+  weight_lb: number | null;
+  shipping_enabled: boolean | null;
+  self_serve_ordering_enabled: boolean | null;
+  delivery_enabled: boolean | null;
+  pickup_enabled: boolean | null;
+  stock_alert_enabled_cc: boolean | null;
+  stock_alert_count_cc: number | null;
+  stock_alert_enabled_st: boolean | null;
+  stock_alert_count_st: number | null;
+  stock_alert_enabled_cv: boolean | null;
+  stock_alert_count_cv: number | null;
+  total_quantity: number;
+  current_qty_cc: number;
+  current_qty_st: number;
+  current_qty_cv: number;
+  quantity_as_of_date: string | null;
+  parent_sku: string | null;
+  barcode: string | null;
+  gtin: string | null;
+  vendor_code: string | null;
+  sellable: boolean | null;
+  stockable: boolean | null;
+  contains_alcohol: boolean | null;
+  skip_pos_detail: boolean | null;
+  shopify_product_id: number | null;
+  shopify_variant_id: number | null;
+  variants_json: any;
+  square_object_id: string | null;
+  square_variation_id: string | null;
+  stock_json: any;
+  quickbooks_id: string | null;
+  booker_id: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  archived: boolean;
+  archive_reason: string | null;
+  archived_timestamp: string | null;
+  master_id: string | null;
+  date_added: string | null;
+  last_updated: string | null;
+  last_synced_square: string | null;
+  last_synced_qb: string | null;
+  last_synced_booker: string | null;
 }
 
-/**
- * Excel-style column filter dropdown (no search input).
- */
-const ColumnFilterMenu: React.FC<ColumnFilterMenuProps> = ({
-  values,
-  activeValues,
-  setValues,
-  sortAsc,
-  sortDesc,
-  clearSort,
-  close,
-}) => {
-  const toggle = (val: string) => {
-    if (activeValues.includes(val)) {
-      setValues(activeValues.filter((v) => v !== val));
-    } else {
-      setValues([...activeValues, val]);
-    }
-  };
+// Simple demo data until Supabase is wired
+const demoRows: MasterRow[] = [];
 
-  return (
-    <div className="filter-menu" onClick={(e) => e.stopPropagation()}>
-      <div className="filter-section">
-        <button onClick={sortAsc}>Sort A → Z</button>
-        <button onClick={sortDesc}>Sort Z → A</button>
-        <button onClick={clearSort}>Clear sort</button>
-      </div>
-
-      <div className="filter-divider" />
-
-      <div className="filter-value-list">
-        {values.map((v) => (
-          <label key={v || "(blank)"} className="filter-checkbox-row">
-            <input
-              type="checkbox"
-              checked={activeValues.includes(v)}
-              onChange={() => toggle(v)}
-            />
-            {v || "(blank)"}
-          </label>
-        ))}
-      </div>
-
-      <div className="filter-actions">
-        <button className="filter-action-btn" onClick={close}>
-          Close
-        </button>
-        <button className="filter-action-btn primary" onClick={close}>
-          Apply</button>
-      </div>
-    </div>
-  );
-};
+function rowClass(status: MasterStatus): string {
+  switch (status) {
+    case "APPROVED":
+      return "row-status-approved";
+    case "READY_FOR_APPROVAL":
+      return "row-status-pending";
+    case "MISSING_INFO":
+    default:
+      return "row-status-missing";
+  }
+}
 
 export const MasterGrid: React.FC = () => {
-  const { rows, loading, error } = useMasterInventory();
+  const searchQuery = useInventoryStore(s => s.searchQuery);
 
-  const [sort, setSort] = useState<SortState>({ col: "", dir: null });
-  const [filters, setFilters] = useState<Record<string, string[]>>({});
-  const [openCol, setOpenCol] = useState<string | null>(null);
+  // For now, use demoRows; eventually fetch from Supabase.
+  const rows = demoRows;
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const colRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
-  const [statusWidth, setStatusWidth] = useState<number>(180);
-
-  // --- COLUMN DEFINITIONS (Product Name is SECOND column) ---
-  const columns: ColumnDef[] = [
-    // CORE
-    { key: "status", label: "Status", group: "Core", sticky: true }, // col 1
-    {
-      key: "product_name",
-      label: "Product Name",
-      group: "Core",
-      sticky: true,
-    }, // col 2
-
-    // INVENTORY
-    { key: "sku", label: "SKU", group: "Inventory" },
-    { key: "vendor", label: "Vendor", group: "Inventory" },
-    {
-      key: "total_inventory_on_hand",
-      label: "Inventory On Hand – Total",
-      group: "Inventory",
-    },
-    {
-      key: "total_inventory_on_the_way",
-      label: "Inventory On The Way – Total",
-      group: "Inventory",
-    },
-    { key: "incoming_total", label: "Incoming Total", group: "Inventory" },
-    {
-      key: "qty_coastal_cowgirl",
-      label: "Inventory On Hand – Coastal Cowgirl",
-      group: "Inventory",
-    },
-    {
-      key: "qty_salty_tails",
-      label: "Inventory On Hand – Salty Tails",
-      group: "Inventory",
-    },
-    {
-      key: "qty_central_valley",
-      label: "Inventory On Hand – Central Valley",
-      group: "Inventory",
-    },
-    {
-      key: "new_qty_coastal_cowgirl",
-      label: "Inventory On The Way – Coastal Cowgirl",
-      group: "Inventory",
-    },
-    {
-      key: "new_qty_salty_tails",
-      label: "Inventory On The Way – Salty Tails",
-      group: "Inventory",
-    },
-    {
-      key: "new_qty_central_valley",
-      label: "Inventory On The Way – Central Valley",
-      group: "Inventory",
-    },
-    { key: "reorder_point", label: "Reorder Point", group: "Inventory" },
-
-    // CLASSIFICATION
-    { key: "product_type", label: "Product Type", group: "Classification" },
-    {
-      key: "product_category",
-      label: "Product Category",
-      group: "Classification",
-    },
-    { key: "category", label: "Category", group: "Classification" },
-    {
-      key: "reporting_category",
-      label: "Reporting Category",
-      group: "Classification",
-    },
-    { key: "description", label: "Description", group: "Classification" },
-    {
-      key: "sales_description",
-      label: "Sales Description",
-      group: "Classification",
-    },
-    {
-      key: "purchase_description",
-      label: "Purchase Description",
-      group: "Classification",
-    },
-    { key: "tags", label: "Tags", group: "Classification" },
-
-    // VARIANTS
-    {
-      key: "single_parent_or_variant",
-      label: "Single Parent or Variant",
-      group: "Variants",
-    },
-    { key: "variant_name", label: "Variant Name", group: "Variants" },
-    { key: "variant_title", label: "Variant Title", group: "Variants" },
-    { key: "option1_name", label: "Option 1 Name", group: "Variants" },
-    { key: "option1_value", label: "Option 1 Value", group: "Variants" },
-    { key: "option2_name", label: "Option 2 Name", group: "Variants" },
-    { key: "option2_value", label: "Option 2 Value", group: "Variants" },
-    { key: "option3_name", label: "Option 3 Name", group: "Variants" },
-    { key: "option3_value", label: "Option 3 Value", group: "Variants" },
-    { key: "option4_name", label: "Option 4 Name", group: "Variants" },
-    { key: "option4_value", label: "Option 4 Value", group: "Variants" },
-
-    // SHOPIFY
-    { key: "handle", label: "Shopify Handle", group: "Shopify" },
-    { key: "permalink", label: "Shopify Permalink", group: "Shopify" },
-    {
-      key: "image_url",
-      label: "Product Image",
-      group: "Shopify",
-      isImage: true,
-    },
-    {
-      key: "variant_image_url",
-      label: "Variant Image",
-      group: "Shopify",
-      isImage: true,
-    },
-    { key: "square_image_id", label: "Square Image ID", group: "Shopify" },
-
-    // PRICING & ACCOUNTS
-    { key: "price", label: "Base Price", group: "Pricing & Accounts" },
-    { key: "online_price", label: "Online Price", group: "Pricing & Accounts" },
-    { key: "cost", label: "Cost", group: "Pricing & Accounts" },
-    { key: "compare_at", label: "Compare At Price", group: "Pricing & Accounts" },
-    {
-      key: "default_unit_cost",
-      label: "Default Unit Cost",
-      group: "Pricing & Accounts",
-    },
-    {
-      key: "income_account",
-      label: "Income Account (QB)",
-      group: "Pricing & Accounts",
-    },
-    {
-      key: "expense_account",
-      label: "Expense Account (QB)",
-      group: "Pricing & Accounts",
-    },
-    {
-      key: "inventory_asset_account",
-      label: "Inventory Asset Account (QB)",
-      group: "Pricing & Accounts",
-    },
-
-    // TAX & WEIGHT
-    { key: "sales_tax_rate", label: "Sales Tax Rate", group: "Tax & Weight" },
-    { key: "tax_code", label: "Tax Code", group: "Tax & Weight" },
-    { key: "taxable", label: "Taxable?", group: "Tax & Weight" },
-    {
-      key: "last_delivery_date",
-      label: "Last Delivery Date",
-      group: "Tax & Weight",
-    },
-    { key: "weight_lb", label: "Weight (lb)", group: "Tax & Weight" },
-
-    // FULFILLMENT
-    {
-      key: "shipping_enabled",
-      label: "Shipping Enabled",
-      group: "Fulfillment",
-    },
-    {
-      key: "self_serve_ordering_enabled",
-      label: "Self-Serve Ordering Enabled",
-      group: "Fulfillment",
-    },
-    {
-      key: "delivery_enabled",
-      label: "Delivery Enabled",
-      group: "Fulfillment",
-    },
-    { key: "pickup_enabled", label: "Pickup Enabled", group: "Fulfillment" },
-
-    // STOCK ALERTS
-    {
-      key: "stock_alert_enabled_cc",
-      label: "Stock Alert – Coastal Cowgirl",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_count_cc",
-      label: "Alert Threshold – Coastal Cowgirl",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_enabled_st",
-      label: "Stock Alert – Salty Tails",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_count_st",
-      label: "Alert Threshold – Salty Tails",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_enabled_cv",
-      label: "Stock Alert – Central Valley",
-      group: "Stock Alerts",
-    },
-    {
-      key: "stock_alert_count_cv",
-      label: "Alert Threshold – Central Valley",
-      group: "Stock Alerts",
-    },
-
-    // QUANTITIES SNAPSHOT
-    {
-      key: "total_quantity",
-      label: "Total Quantity (Snapshot)",
-      group: "Quantities",
-    },
-    {
-      key: "current_qty_cc",
-      label: "Current Qty – Coastal Cowgirl",
-      group: "Quantities",
-    },
-    {
-      key: "current_qty_st",
-      label: "Current Qty – Salty Tails",
-      group: "Quantities",
-    },
-    {
-      key: "current_qty_cv",
-      label: "Current Qty – Central Valley",
-      group: "Quantities",
-    },
-    {
-      key: "quantity_as_of_date",
-      label: "Quantity As Of Date",
-      group: "Quantities",
-    },
-
-    // IDENTIFIERS
-    { key: "parent_sku", label: "Parent SKU", group: "Identifiers" },
-    { key: "barcode", label: "Barcode", group: "Identifiers" },
-    { key: "gtin", label: "GTIN", group: "Identifiers" },
-    { key: "vendor_code", label: "Vendor Code", group: "Identifiers" },
-    { key: "sellable", label: "Sellable?", group: "Identifiers" },
-    { key: "stockable", label: "Stockable?", group: "Identifiers" },
-    {
-      key: "contains_alcohol",
-      label: "Contains Alcohol?",
-      group: "Identifiers",
-    },
-    {
-      key: "skip_pos_detail",
-      label: "Skip POS Detail",
-      group: "Identifiers",
-    },
-
-    // INTEGRATIONS / SEO
-    {
-      key: "shopify_product_id",
-      label: "Shopify Product ID",
-      group: "Integrations / SEO",
-    },
-    {
-      key: "shopify_variant_id",
-      label: "Shopify Variant ID",
-      group: "Integrations / SEO",
-    },
-    {
-      key: "variants_json",
-      label: "Variants JSON",
-      group: "Integrations / SEO",
-    },
-    {
-      key: "square_object_id",
-      label: "Square Object ID",
-      group: "Integrations / SEO",
-    },
-    {
-      key: "square_variation_id",
-      label: "Square Variation ID",
-      group: "Integrations / SEO",
-    },
-    { key: "stock_json", label: "Stock JSON", group: "Integrations / SEO" },
-    { key: "quickbooks_id", label: "QuickBooks ID", group: "Integrations / SEO" },
-    { key: "booker_id", label: "Booker ID", group: "Integrations / SEO" },
-    { key: "seo_title", label: "SEO Title", group: "Integrations / SEO" },
-    {
-      key: "seo_description",
-      label: "SEO Description",
-      group: "Integrations / SEO",
-    },
-
-    // LIFECYCLE
-    { key: "archived", label: "Archived?", group: "Lifecycle" },
-    { key: "archive_reason", label: "Archive Reason", group: "Lifecycle" },
-    {
-      key: "archived_timestamp",
-      label: "Archived Timestamp",
-      group: "Lifecycle",
-    },
-    { key: "master_id", label: "Master ID", group: "Lifecycle" },
-    { key: "date_added", label: "Date Added", group: "Lifecycle" },
-    { key: "last_updated", label: "Last Updated", group: "Lifecycle" },
-    {
-      key: "last_synced_square",
-      label: "Last Synced – Square",
-      group: "Lifecycle",
-    },
-    {
-      key: "last_synced_qb",
-      label: "Last Synced – QuickBooks",
-      group: "Lifecycle",
-    },
-    {
-      key: "last_synced_booker",
-      label: "Last Synced – Booker",
-      group: "Lifecycle",
-    },
-  ];
-
-  // Group spans for header row
-  const groupSpans = useMemo(() => {
-    const map: Record<string, number> = {};
-    columns.forEach((c) => {
-      map[c.group] = (map[c.group] || 0) + 1;
-    });
-    return map;
-  }, [columns]);
-
-  const uniqueGroups = Object.keys(groupSpans);
-
-  // Close filter when clicking outside
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(e.target as Node)) {
-        setOpenCol(null);
-      }
-    };
-    window.addEventListener("mousedown", handleClick);
-    return () => window.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  // Measure Status column width once we have rows, to align Product Name sticky left
-  useEffect(() => {
-    const el = colRefs.current["status"];
-    if (el) {
-      setStatusWidth(el.offsetWidth || 180);
-    }
-  }, [rows.length]);
-
-  // Filter + sort
-  const processed = useMemo(() => {
-    let data = [...rows];
-
-    for (const col of Object.keys(filters)) {
-      const allowed = filters[col];
-      if (!allowed.length) continue;
-      data = data.filter((row) =>
-        allowed.includes(String((row as any)[col] ?? ""))
-      );
-    }
-
-    if (sort.col && sort.dir) {
-      data.sort((a, b) => {
-        const A = String((a as any)[sort.col] ?? "").toLowerCase();
-        const B = String((b as any)[sort.col] ?? "").toLowerCase();
-        if (A < B) return sort.dir === "asc" ? -1 : 1;
-        if (A > B) return sort.dir === "asc" ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return data;
-  }, [rows, filters, sort]);
-
-  // Sticky style for Status / Product cells
-  const getStickyStyle = (col: ColumnDef): React.CSSProperties => {
-    if (!col.sticky) return {};
-    if (col.key === "status") {
-      return {
-        position: "sticky",
-        left: 0,
-        zIndex: 10,
-        background: "#ffffff",
-      };
-    }
-    if (col.key === "product_name") {
-      return {
-        position: "sticky",
-        left: statusWidth,
-        zIndex: 9,
-        background: "#ffffff",
-      };
-    }
-    return {};
-  };
-
-  if (loading) {
+  const filtered = rows.filter(row => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
     return (
-      <div className="sheet-container">
-        <div className="sheet-name">Master (loading…)</div>
-        <div className="empty-state">Loading Master inventory…</div>
-      </div>
+      row.product_name.toLowerCase().includes(q) ||
+      row.sku.toLowerCase().includes(q) ||
+      (row.vendor || "").toLowerCase().includes(q) ||
+      (row.category || "").toLowerCase().includes(q) ||
+      (row.tags || "").toLowerCase().includes(q)
     );
-  }
-
-  if (error) {
-    return (
-      <div className="sheet-container">
-        <div className="sheet-name">Master (error)</div>
-        <div className="empty-state">Error: {error}</div>
-      </div>
-    );
-  }
+  });
 
   return (
-    <div className="sheet-container fade-in" ref={containerRef}>
-      <div className="sheet-name sheet-name-large">
-        Master (Source of Truth · read-only)
-      </div>
-
-      <div className="sheet-table-wrapper wide-scroll">
+    <div className="sheet-container fade-in">
+      <div className="sheet-name">Master (Source of Truth · read-only)</div>
+      <div className="sheet-table-wrapper">
         <table className="sheet-table sheet-table-master">
           <thead>
-            {/* GROUP HEADER ROW (secondary headers, color-coded) */}
+            {/* Grouped header row */}
             <tr className="header-group-row">
-              {uniqueGroups.map((group) => {
-                const span = groupSpans[group];
-                const slug = group.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-                const isCore = group === "Core";
-
-                // ONLY Core header cell is sticky on the left
-                const style: React.CSSProperties = isCore
-                  ? {
-                      position: "sticky",
-                      left: 0,
-                      zIndex: 11,
-                      background: "#dbeafe",
-                    }
-                  : {};
-
-                return (
-                  <th
-                    key={group}
-                    colSpan={span}
-                    className={`header-group-cell header-group-${slug}`}
-                    style={style}
-                  >
-                    {group}
-                  </th>
-                );
-              })}
+              <th className="col-sticky col-status-group" colSpan={2}>
+                Core
+              </th>
+              <th colSpan={12}>Inventory</th>
+              <th colSpan={8}>Classification</th>
+              <th colSpan={8}>Options & Variants</th>
+              <th colSpan={6}>Shopify</th>
+              <th colSpan={10}>Pricing & Accounts</th>
+              <th colSpan={12}>Fulfillment & Alerts</th>
+              <th colSpan={10}>Identifiers</th>
+              <th colSpan={10}>Integrations & SEO</th>
+              <th colSpan={7}>Lifecycle & Sync</th>
             </tr>
-
-            {/* COLUMN HEADERS (each with filter) */}
+            {/* Actual column headers */}
             <tr>
-              {columns.map((col) => {
-                const stickyStyle = getStickyStyle(col);
+              <th className="col-sticky">Status</th>
+              <th className="col-sticky">Product Name</th>
 
-                const uniqueValues = Array.from(
-                  new Set(
-                    rows.map((r) => String((r as any)[col.key] ?? ""))
-                  )
-                ).sort((a, b) => a.localeCompare(b));
+              <th>SKU</th>
+              <th>Vendor</th>
+              <th>Total On Hand</th>
+              <th>Total On The Way</th>
+              <th>Incoming Total</th>
+              <th>Qty Coastal Cowgirl</th>
+              <th>Qty Salty Tails</th>
+              <th>Qty Central Valley</th>
+              <th>New Qty CC</th>
+              <th>New Qty ST</th>
+              <th>New Qty CV</th>
+              <th>Reorder Point</th>
 
-                const isActiveFilter =
-                  (filters[col.key] || []).length > 0 ||
-                  (sort.col === col.key && !!sort.dir);
+              <th>Product Type</th>
+              <th>Product Category</th>
+              <th>Category</th>
+              <th>Reporting Category</th>
+              <th>Description</th>
+              <th>Sales Description</th>
+              <th>Purchase Description</th>
+              <th>Tags</th>
 
-                return (
-                  <th
-                    key={col.key}
-                    style={stickyStyle}
-                    ref={(el) => {
-                      colRefs.current[col.key] = el;
-                    }}
-                  >
-                    <div className="header-cell">
-                      <span className="header-label">{col.label}</span>
-                      <button
-                        className={
-                          "filter-button" + (isActiveFilter ? " active" : "")
-                        }
-                        onClick={(e: ReactMouseEvent) => {
-                          e.stopPropagation();
-                          setOpenCol(openCol === col.key ? null : col.key);
-                        }}
-                      >
-                        <ChevronDown size={16} />
-                      </button>
+              <th>Parent / Variant</th>
+              <th>Variant Name</th>
+              <th>Variant Title</th>
+              <th>Option1 Name</th>
+              <th>Option1 Value</th>
+              <th>Option2 Name</th>
+              <th>Option2 Value</th>
+              <th>Option3 Name</th>
+              <th>Option3 Value</th>
+              <th>Option4 Name</th>
+              <th>Option4 Value</th>
 
-                      {openCol === col.key && (
-                        <ColumnFilterMenu
-                          values={uniqueValues}
-                          activeValues={filters[col.key] || []}
-                          setValues={(vals) =>
-                            setFilters((prev) => ({
-                              ...prev,
-                              [col.key]: vals,
-                            }))
-                          }
-                          sortAsc={() =>
-                            setSort({ col: col.key, dir: "asc" })
-                          }
-                          sortDesc={() =>
-                            setSort({ col: col.key, dir: "desc" })
-                          }
-                          clearSort={() =>
-                            setSort({ col: "", dir: null })
-                          }
-                          close={() => setOpenCol(null)}
-                        />
-                      )}
-                    </div>
-                  </th>
-                );
-              })}
+              <th>Handle</th>
+              <th>Permalink</th>
+              <th>Image</th>
+              <th>Variant Image</th>
+              <th>Square Image ID</th>
+
+              <th>Price</th>
+              <th>Online Price</th>
+              <th>Cost</th>
+              <th>Compare At</th>
+              <th>Default Unit Cost</th>
+              <th>Income Account</th>
+              <th>Expense Account</th>
+              <th>Inventory Asset Account</th>
+
+              <th>Sales Tax Rate</th>
+              <th>Tax Code</th>
+              <th>Taxable</th>
+
+              <th>Last Delivery Date</th>
+              <th>Weight (lb)</th>
+
+              <th>Shipping Enabled</th>
+              <th>Self-Serve Ordering</th>
+              <th>Delivery Enabled</th>
+              <th>Pickup Enabled</th>
+
+              <th>CC Alert Enabled</th>
+              <th>CC Alert Count</th>
+              <th>ST Alert Enabled</th>
+              <th>ST Alert Count</th>
+              <th>CV Alert Enabled</th>
+              <th>CV Alert Count</th>
+
+              <th>Total Quantity</th>
+              <th>Current Qty CC</th>
+              <th>Current Qty ST</th>
+              <th>Current Qty CV</th>
+              <th>Quantity As Of</th>
+
+              <th>Parent SKU</th>
+              <th>Barcode</th>
+              <th>GTIN</th>
+              <th>Vendor Code</th>
+              <th>Sellable</th>
+              <th>Stockable</th>
+              <th>Contains Alcohol</th>
+              <th>Skip POS Detail</th>
+
+              <th>Shopify Product ID</th>
+              <th>Shopify Variant ID</th>
+              <th>Variants JSON</th>
+              <th>Square Object ID</th>
+              <th>Square Variation ID</th>
+              <th>Stock JSON</th>
+              <th>QuickBooks ID</th>
+              <th>Booker ID</th>
+              <th>SEO Title</th>
+              <th>SEO Description</th>
+
+              <th>Archived</th>
+              <th>Archive Reason</th>
+              <th>Archived Timestamp</th>
+              <th>Master ID</th>
+              <th>Date Added</th>
+              <th>Last Updated</th>
+              <th>Last Synced Square</th>
+              <th>Last Synced QB</th>
+              <th>Last Synced Booker</th>
             </tr>
           </thead>
-
           <tbody>
-            {processed.map((row) => (
-              <tr
-                key={row.id}
-                className={`master-row row-status-${String(
-                  (row as any).status || ""
-                ).toLowerCase()}`}
-              >
-                {columns.map((col) => {
-                  const stickyStyle = getStickyStyle(col);
-                  let value: any = (row as any)[col.key];
-
-                  if (typeof value === "boolean") {
-                    value = value ? "Yes" : "";
-                  }
-
-                  if (col.isImage) {
-                    return (
-                      <td key={col.key} style={stickyStyle}>
-                        {value ? (
-                          <img
-                            src={String(value)}
-                            alt=""
-                            className="mini-image"
-                          />
-                        ) : (
-                          ""
-                        )}
-                      </td>
-                    );
-                  }
-
-                  return (
-                    <td key={col.key} style={stickyStyle}>
-                      {String(value ?? "")}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-
-            {processed.length === 0 && (
+            {filtered.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="empty-state">
-                  No products match filters.
+                <td colSpan={120} style={{ textAlign: "center", padding: "20px" }}>
+                  No products match your search.
                 </td>
               </tr>
+            ) : (
+              filtered.map(row => (
+                <tr
+                  key={row.id || `${row.shopify_variant_id}-${row.sku}`}
+                  className={`master-row ${rowClass(row.status)}`}
+                >
+                  <td className="col-sticky">
+                    {row.status === "APPROVED"
+                      ? "Approved"
+                      : row.status === "READY_FOR_APPROVAL"
+                      ? "Ready"
+                      : "Missing Info"}
+                  </td>
+                  <td className="col-sticky">
+                    <div className="product-preview-cell">
+                      <div className="product-preview-thumb">
+                        {row.image_url ? (
+                          <img src={row.image_url} alt={row.product_name} />
+                        ) : (
+                          <div className="product-preview-placeholder" />
+                        )}
+                      </div>
+                      <span className="product-preview-name">
+                        {row.product_name}
+                      </span>
+                    </div>
+                  </td>
+
+                  <td>{row.sku}</td>
+                  <td>{row.vendor}</td>
+                  <td className="cell-number">{row.total_inventory_on_hand}</td>
+                  <td className="cell-number">{row.total_inventory_on_the_way}</td>
+                  <td className="cell-number">{row.incoming_total}</td>
+                  <td className="cell-number">{row.qty_coastal_cowgirl}</td>
+                  <td className="cell-number">{row.qty_salty_tails}</td>
+                  <td className="cell-number">{row.qty_central_valley}</td>
+                  <td className="cell-number">{row.new_qty_coastal_cowgirl}</td>
+                  <td className="cell-number">{row.new_qty_salty_tails}</td>
+                  <td className="cell-number">{row.new_qty_central_valley}</td>
+                  <td className="cell-number">{row.reorder_point}</td>
+
+                  <td>{row.product_type}</td>
+                  <td>{row.product_category}</td>
+                  <td>{row.category}</td>
+                  <td>{row.reporting_category}</td>
+                  <td className="cell-wrap">{row.description}</td>
+                  <td className="cell-wrap">{row.sales_description}</td>
+                  <td className="cell-wrap">{row.purchase_description}</td>
+                  <td className="cell-wrap">{row.tags}</td>
+
+                  <td>{row.single_parent_or_variant}</td>
+                  <td>{row.variant_name}</td>
+                  <td>{row.variant_title}</td>
+                  <td>{row.option1_name}</td>
+                  <td>{row.option1_value}</td>
+                  <td>{row.option2_name}</td>
+                  <td>{row.option2_value}</td>
+                  <td>{row.option3_name}</td>
+                  <td>{row.option3_value}</td>
+                  <td>{row.option4_name}</td>
+                  <td>{row.option4_value}</td>
+
+                  <td>{row.handle}</td>
+                  <td className="cell-wrap">{row.permalink}</td>
+                  <td>
+                    {row.image_url && (
+                      <img
+                        src={row.image_url}
+                        alt=""
+                        className="mini-image"
+                      />
+                    )}
+                  </td>
+                  <td>
+                    {row.variant_image_url && (
+                      <img
+                        src={row.variant_image_url}
+                        alt=""
+                        className="mini-image"
+                      />
+                    )}
+                  </td>
+                  <td>{row.square_image_id}</td>
+
+                  <td className="cell-number">{row.price}</td>
+                  <td className="cell-number">{row.online_price}</td>
+                  <td className="cell-number">{row.cost}</td>
+                  <td className="cell-number">{row.compare_at}</td>
+                  <td className="cell-number">{row.default_unit_cost}</td>
+                  <td>{row.income_account}</td>
+                  <td>{row.expense_account}</td>
+                  <td>{row.inventory_asset_account}</td>
+
+                  <td className="cell-number">{row.sales_tax_rate}</td>
+                  <td>{row.tax_code}</td>
+                  <td>{row.taxable ? "Yes" : "No"}</td>
+
+                  <td>{row.last_delivery_date}</td>
+                  <td className="cell-number">{row.weight_lb}</td>
+
+                  <td>{row.shipping_enabled ? "Yes" : "No"}</td>
+                  <td>{row.self_serve_ordering_enabled ? "Yes" : "No"}</td>
+                  <td>{row.delivery_enabled ? "Yes" : "No"}</td>
+                  <td>{row.pickup_enabled ? "Yes" : "No"}</td>
+
+                  <td>{row.stock_alert_enabled_cc ? "Yes" : "No"}</td>
+                  <td className="cell-number">{row.stock_alert_count_cc}</td>
+                  <td>{row.stock_alert_enabled_st ? "Yes" : "No"}</td>
+                  <td className="cell-number">{row.stock_alert_count_st}</td>
+                  <td>{row.stock_alert_enabled_cv ? "Yes" : "No"}</td>
+                  <td className="cell-number">{row.stock_alert_count_cv}</td>
+
+                  <td className="cell-number">{row.total_quantity}</td>
+                  <td className="cell-number">{row.current_qty_cc}</td>
+                  <td className="cell-number">{row.current_qty_st}</td>
+                  <td className="cell-number">{row.current_qty_cv}</td>
+                  <td>{row.quantity_as_of_date}</td>
+
+                  <td>{row.parent_sku}</td>
+                  <td>{row.barcode}</td>
+                  <td>{row.gtin}</td>
+                  <td>{row.vendor_code}</td>
+                  <td>{row.sellable ? "Yes" : "No"}</td>
+                  <td>{row.stockable ? "Yes" : "No"}</td>
+                  <td>{row.contains_alcohol ? "Yes" : "No"}</td>
+                  <td>{row.skip_pos_detail ? "Yes" : "No"}</td>
+
+                  <td>{row.shopify_product_id}</td>
+                  <td>{row.shopify_variant_id}</td>
+                  <td className="cell-wrap">JSON</td>
+                  <td>{row.square_object_id}</td>
+                  <td>{row.square_variation_id}</td>
+                  <td className="cell-wrap">JSON</td>
+                  <td>{row.quickbooks_id}</td>
+                  <td>{row.booker_id}</td>
+                  <td className="cell-wrap">{row.seo_title}</td>
+                  <td className="cell-wrap">{row.seo_description}</td>
+
+                  <td>{row.archived ? "Yes" : "No"}</td>
+                  <td>{row.archive_reason}</td>
+                  <td>{row.archived_timestamp}</td>
+                  <td>{row.master_id}</td>
+                  <td>{row.date_added}</td>
+                  <td>{row.last_updated}</td>
+                  <td>{row.last_synced_square}</td>
+                  <td>{row.last_synced_qb}</td>
+                  <td>{row.last_synced_booker}</td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
@@ -662,4 +427,3 @@ export const MasterGrid: React.FC = () => {
     </div>
   );
 };
-
