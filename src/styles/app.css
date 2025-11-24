@@ -1,6 +1,16 @@
-/* ============================================================
-   GLOBAL RESET + BASE
-   ============================================================ */
+import React, { useState } from 'react';
+import { Search, RefreshCw, Package, FileText, ClipboardList, BarChart3, Plus, Check, AlertTriangle, X } from 'lucide-react';
+
+// Sample data
+const initialProducts = [
+  { id: 1, sku: 'SKU-001', name: 'Organic Green Tea', category: 'Beverages', price: 12.99, stock: 150, status: 'approved', image: null, description: 'Premium organic green tea leaves', locations: ['Warehouse A', 'Store 1'] },
+  { id: 2, sku: 'SKU-002', name: 'Almond Butter', category: 'Spreads', price: 8.49, stock: 0, status: 'missing', image: null, description: '', locations: [] },
+  { id: 3, sku: 'SKU-003', name: 'Quinoa Crackers', category: 'Snacks', price: 5.99, stock: 45, status: 'pending', image: null, description: 'Gluten-free quinoa crackers', locations: ['Warehouse B'] },
+  { id: 4, sku: 'SKU-004', name: 'Coconut Oil', category: 'Oils', price: 14.99, stock: 200, status: 'approved', image: null, description: 'Cold-pressed virgin coconut oil', locations: ['Warehouse A', 'Store 2', 'Store 3'] },
+  { id: 5, sku: 'SKU-005', name: 'Oat Milk', category: 'Beverages', price: 4.99, stock: 12, status: 'pending', image: null, description: 'Unsweetened oat milk', locations: ['Store 1'] },
+];
+
+const styles = `
 *,
 *::before,
 *::after {
@@ -9,11 +19,9 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #f3f4f6;
   color: #111827;
-  -webkit-font-smoothing: antialiased;
 }
 
 .app-root {
@@ -22,35 +30,30 @@ body {
   height: 100vh;
 }
 
-
-/* ============================================================
-   TOP BAR
-   ============================================================ */
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 18px;
+  padding: 8px 16px;
   background: #111827;
   color: #f9fafb;
-  gap: 14px;
-  border-bottom: 1px solid #1f2937;
+  gap: 12px;
 }
 
 .topbar-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .topbar-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .topbar-center {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: center;
   flex: 1;
 }
@@ -58,7 +61,7 @@ body {
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .btn-ghost {
@@ -66,7 +69,7 @@ body {
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border-radius: 6px;
+  border-radius: 4px;
   border: 1px solid rgba(249, 250, 251, 0.25);
   background: transparent;
   color: inherit;
@@ -74,14 +77,13 @@ body {
   font-size: 12px;
 }
 
-/* Global search bar (only in topbar) */
 .topbar-search {
   display: flex;
   align-items: center;
   border-radius: 999px;
   background: #1f2937;
   border: 1px solid #374151;
-  padding: 4px 10px;
+  padding: 2px 8px;
   gap: 6px;
 }
 
@@ -90,73 +92,47 @@ body {
   outline: none;
   background: transparent;
   color: #f9fafb;
-  font-size: 13px;
-  width: 200px;
+  font-size: 12px;
+  width: 160px;
 }
 
 .topbar-search-input::placeholder {
   color: #9ca3af;
 }
 
-
-/* ============================================================
-   PILLS (Approved / Needs Approval cards, etc.)
-   ============================================================ */
 .pill {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   border-radius: 999px;
-  padding: 3px 10px;
+  padding: 2px 10px;
   font-size: 11px;
   border: 1px solid transparent;
 }
 
-.pill-green {
-  background: #dcfce7;
-  color: #166534;
-  border-color: #22c55e;
-}
+.pill-green { background: #dcfce7; color: #166534; border-color: #22c55e; }
+.pill-yellow { background: #fef9c3; color: #854d0e; border-color: #eab308; }
+.pill-red { background: #fee2e2; color: #b91c1c; border-color: #ef4444; }
 
-.pill-yellow {
-  background: #fef9c3;
-  color: #854d0e;
-  border-color: #eab308;
-}
-
-.pill-red {
-  background: #fee2e2;
-  color: #b91c1c;
-  border-color: #ef4444;
-}
-
-
-/* ============================================================
-   APP CONTENT
-   ============================================================ */
 .app-content {
   flex: 1;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding-bottom: 60px; /* space for bottom tab bar */
+  padding-bottom: 56px;
 }
 
-
-/* ============================================================
-   BOTTOM TABBAR (mobile-style)
-   ============================================================ */
 .tabbar-bottom {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 6px 8px 10px;
+  padding: 6px 8px 8px;
   background: #111827;
   border-top: 1px solid #374151;
   display: flex;
   justify-content: space-around;
-  z-index: 50;
+  z-index: 10;
 }
 
 .tabbar-item {
@@ -166,18 +142,13 @@ body {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  border-radius: 12px;
-  padding: 6px 4px;
-  font-size: 11px;
+  border-radius: 999px;
+  padding: 4px 4px;
+  font-size: 10px;
   border: none;
   background: transparent;
   color: #9ca3af;
   cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.tabbar-item:hover {
-  background: rgba(255, 255, 255, 0.08);
 }
 
 .tabbar-item-active {
@@ -185,10 +156,6 @@ body {
   color: #111827;
 }
 
-
-/* ============================================================
-   SHEET CONTAINER + TITLE
-   ============================================================ */
 .sheet-container {
   display: flex;
   flex-direction: column;
@@ -196,397 +163,169 @@ body {
 }
 
 .sheet-name {
-  padding: 8px 14px;
-  font-size: 13px;
+  padding: 6px 12px;
+  font-size: 12px;
   font-weight: 600;
   border-bottom: 1px solid #d1d5db;
   background: #e5e7eb;
 }
 
-.sheet-name-large {
-  font-size: 16px;
-}
-
-
-/* ============================================================
-   SHEET TABLE WRAPPER
-   ============================================================ */
 .sheet-table-wrapper {
   flex: 1;
   overflow: auto;
-  background: #ffffff;
-  position: relative;
-  scrollbar-width: thin;
+  background: white;
 }
 
-.wide-scroll {
-  overflow-x: auto;
-  overflow-y: auto;
-  max-width: 100%;
-}
-
-
-/* ============================================================
-   MASTER TABLE
-   ============================================================ */
 .sheet-table {
   border-collapse: collapse;
   width: 100%;
-  min-width: 1200px;
-  table-layout: auto;
+  min-width: 1000px;
+  table-layout: fixed;
 }
 
 .sheet-table th,
 .sheet-table td {
   border: 1px solid #d1d5db;
-  padding: 8px 10px;
-  font-size: 14px;
-  line-height: 1.35;
-  background-clip: padding-box;
-  white-space: normal;   /* allow wrapping */
-  word-break: break-word;
+  padding: 4px 6px;
+  font-size: 12px;
 }
 
-/* Column header row */
 .sheet-table th {
   background: #f3f4f6;
   font-weight: 600;
-  text-align: right;
-  position: relative;
-  user-select: none;
-  vertical-align: top;
-}
-
-/* Group header row (secondary headers like Core, Inventory, etc.) */
-.header-group-row th {
-  font-size: 12px;
-  text-align: center;
-  border-bottom: 2px solid #9ca3af;
-}
-
-/* Base styling for group header cells */
-.header-group-cell {
-  padding: 6px 10px;
-}
-
-/* Color-coded group headers */
-.header-group-core {
-  background: #dbeafe; /* soft blue */
-}
-
-.header-group-inventory {
-  background: #dcfce7; /* soft green */
-}
-
-.header-group-classification {
-  background: #ede9fe; /* soft purple */
-}
-
-.header-group-variants {
-  background: #fef9c3; /* soft yellow */
-}
-
-.header-group-shopify {
-  background: #ffedd5; /* soft orange */
-}
-
-.header-group-pricing-accounts {
-  background: #fee2e2; /* soft red */
-}
-
-.header-group-tax-weight {
-  background: #e0f2fe; /* soft sky */
-}
-
-.header-group-fulfillment {
-  background: #ccfbf1; /* soft teal */
-}
-
-.header-group-stock-alerts {
-  background: #fef3c7; /* soft amber */
-}
-
-.header-group-quantities {
-  background: #e5e7eb; /* neutral */
-}
-
-.header-group-identifiers {
-  background: #fce7f3; /* soft pink */
-}
-
-.header-group-integrations-seo {
-  background: #e0e7ff; /* soft indigo */
-}
-
-.header-group-lifecycle {
-  background: #e5e7eb; /* neutral */
-}
-
-
-/* ============================================================
-   HEADER CELL + FILTER BUTTON
-   ============================================================ */
-.header-cell {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  position: relative;
-}
-
-.header-label {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-/* Filter button */
-.filter-button {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 4px 5px;
-  color: #9ca3af;
-  border-radius: 4px;
-  transition: 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.filter-button:hover {
-  background: rgba(0, 0, 0, 0.08);
-  color: #374151;
-}
-
-.filter-button.active {
-  background: rgba(59, 130, 246, 0.18);
-  color: #2563eb;
-}
-
-
-/* ============================================================
-   FILTER DROPDOWN MENU
-   ============================================================ */
-.filter-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  min-width: 240px;
-  max-width: 320px;
-  z-index: 2000;
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.25);
-  animation: dropdown-fade 0.15s ease-out;
-}
-
-@keyframes dropdown-fade {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.filter-section {
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.filter-section button {
-  padding: 8px 10px;
-  font-size: 13px;
-  width: 100%;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  cursor: pointer;
   text-align: left;
-  transition: background 0.12s ease;
 }
 
-.filter-section button:hover {
-  background: #f3f4f6;
+/* Master row color states */
+.master-row.row-status-approved {
+  background: #dcfce7;
+}
+.master-row.row-status-pending {
+  background: #fef9c3;
+}
+.master-row.row-status-missing {
+  background: #fee2e2;
 }
 
-.filter-divider {
-  border-bottom: 1px solid #e5e7eb;
-  margin: 4px 0;
+.sheet-table-master .col-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: inherit;
+}
+.sheet-table-master .col-sticky + .col-sticky {
+  left: 140px;
 }
 
-.filter-value-list {
-  max-height: 230px;
-  overflow-y: auto;
-  padding: 6px 10px 0;
-}
-
-.filter-checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 4px;
-  cursor: pointer;
-  font-size: 13px;
-  border-radius: 4px;
-}
-
-.filter-checkbox-row:hover {
-  background: #f3f4f6;
-}
-
-.filter-checkbox-row input {
-  width: 16px;
-  height: 16px;
-  accent-color: #2563eb;
-  cursor: pointer;
-}
-
-/* Filter footer */
-.filter-actions {
-  display: flex;
-  gap: 8px;
-  padding: 8px;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
-  border-radius: 0 0 8px 8px;
-}
-
-.filter-action-btn {
-  flex: 1;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
-}
-
-.filter-action-btn:hover {
-  background: #e5e7eb;
-}
-
-.filter-action-btn.primary {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #ffffff;
-}
-
-.filter-action-btn.primary:hover {
-  background: #1d4ed8;
-}
-
-
-/* ============================================================
-   STICKY COLUMNS / GROUP HEADER (Core only)
-   ============================================================ */
-/* Status + Product Name cells use inline sticky styles from TSX.
-   The Core group header cell is also made sticky via inline style. */
-
-
-/* ============================================================
-   ROWS / CELLS
-   ============================================================ */
-.master-row {
-  transition: background 0.15s ease;
-}
-
-.master-row:hover {
-  background: #f9fafb;
+.cell-wrap {
+  white-space: normal;
+  word-break: break-word;
 }
 
 .mini-image {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: 4px;
   border: 1px solid #d1d5db;
   background: #e5e7eb;
+}
+
+.header-group-row th {
+  text-align: center;
+  font-size: 11px;
+  background: #e5e7eb;
+}
+
+.sheet-table-master th {
+  resize: horizontal;
+  overflow: auto;
 }
 
 .cell-input {
   width: 100%;
   border: none;
-  font-size: 13px;
+  outline: none;
+  font-size: 12px;
+  font-family: inherit;
   padding: 2px 4px;
   background: transparent;
-  outline: none;
 }
 
 .cell-input:focus {
-  background: #eff6ff;
   outline: 1px solid #3b82f6;
+  background: #eff6ff;
 }
 
-
-/* ============================================================
-   EMPTY STATE
-   ============================================================ */
-.empty-state {
-  text-align: center;
-  padding: 40px 20px;
-  color: #6b7280;
-  font-size: 15px;
+.cell-number {
+  text-align: right;
 }
 
-
-/* ============================================================
-   CARD GRID (for summary cards, Approved / Needs Approval)
-   ============================================================ */
 .card-grid {
-  padding: 10px;
+  padding: 8px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 10px;
+  gap: 8px;
   overflow: auto;
 }
 
 .card {
-  background: #ffffff;
-  border-radius: 8px;
+  background: white;
+  border-radius: 6px;
   border: 1px solid #d1d5db;
   display: flex;
   flex-direction: column;
 }
 
 .card-header {
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-bottom: 1px solid #e5e7eb;
 }
 
 .card-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .card-subtitle {
-  font-size: 12px;
+  font-size: 11px;
   color: #6b7280;
 }
 
 .card-body {
-  padding: 8px 10px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field-label {
+  font-size: 11px;
+  color: #4b5563;
 }
 
 .card-footer {
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-top: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
+.btn-primary {
+  border: none;
+  border-radius: 4px;
+  background: #16a34a;
+  color: white;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
 
-/* ============================================================
-   INTAKE FORM (kept from original)
-   ============================================================ */
+.btn-primary:hover {
+  background: #15803d;
+}
+
 .intake-form {
   padding: 8px;
   background: white;
@@ -619,10 +358,6 @@ body {
   gap: 10px;
 }
 
-
-/* ============================================================
-   REPORTS (kept from original)
-   ============================================================ */
 .report-grid {
   padding: 10px;
   display: flex;
@@ -648,50 +383,324 @@ body {
   font-weight: 600;
 }
 
-
-/* ============================================================
-   BUTTONS
-   ============================================================ */
-.btn-primary {
-  border: none;
-  border-radius: 4px;
-  background: #16a34a;
-  color: white;
-  font-size: 12px;
-  padding: 4px 10px;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  background: #15803d;
-}
-
-
-/* ============================================================
-   ANIMATIONS
-   ============================================================ */
 .fade-in {
   animation: fadein 0.25s ease-in;
 }
 
 @keyframes fadein {
-  from {
-    opacity: 0;
-    transform: translateY(3px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
 }
+`;
 
-@keyframes dropdown-fade {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+export default function ProductValidationApp() {
+  const [activeTab, setActiveTab] = useState('master');
+  const [products, setProducts] = useState(initialProducts);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.sku.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const stats = {
+    total: products.length,
+    approved: products.filter(p => p.status === 'approved').length,
+    pending: products.filter(p => p.status === 'pending').length,
+    missing: products.filter(p => p.status === 'missing').length,
+  };
+
+  const updateProduct = (id, field, value) => {
+    setProducts(prev => prev.map(p => 
+      p.id === id ? { ...p, [field]: value } : p
+    ));
+  };
+
+  const approveProduct = (id) => {
+    updateProduct(id, 'status', 'approved');
+  };
+
+  const getStatusIcon = (status) => {
+    switch(status) {
+      case 'approved': return <Check size={12} />;
+      case 'pending': return <AlertTriangle size={12} />;
+      case 'missing': return <X size={12} />;
+      default: return null;
+    }
+  };
+
+  return (
+    <>
+      <style>{styles}</style>
+      <div className="app-root">
+        {/* Topbar */}
+        <div className="topbar">
+          <div className="topbar-left">
+            <Package size={20} />
+            <span className="topbar-title">Product Validation</span>
+          </div>
+          
+          <div className="topbar-center">
+            <span className="pill pill-green">{stats.approved} Approved</span>
+            <span className="pill pill-yellow">{stats.pending} Pending</span>
+            <span className="pill pill-red">{stats.missing} Missing</span>
+          </div>
+          
+          <div className="topbar-right">
+            <div className="topbar-search">
+              <Search size={14} style={{ opacity: 0.7 }} />
+              <input 
+                type="text" 
+                className="topbar-search-input" 
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <button className="btn-ghost">
+              <RefreshCw size={14} />
+              Sync
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="app-content">
+          {activeTab === 'master' && (
+            <div className="sheet-container fade-in">
+              <div className="sheet-name">Master Product List</div>
+              <div className="sheet-table-wrapper">
+                <table className="sheet-table sheet-table-master">
+                  <thead>
+                    <tr className="header-group-row">
+                      <th colSpan={2}>Identity</th>
+                      <th colSpan={3}>Product Info</th>
+                      <th colSpan={2}>Inventory</th>
+                      <th>Status</th>
+                    </tr>
+                    <tr>
+                      <th style={{ width: 140 }} className="col-sticky">SKU</th>
+                      <th style={{ width: 140 }} className="col-sticky">Name</th>
+                      <th style={{ width: 100 }}>Category</th>
+                      <th style={{ width: 60 }}>Image</th>
+                      <th style={{ width: 200 }}>Description</th>
+                      <th style={{ width: 80 }}>Price</th>
+                      <th style={{ width: 80 }}>Stock</th>
+                      <th style={{ width: 100 }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map(product => (
+                      <tr 
+                        key={product.id} 
+                        className={`master-row row-status-${product.status}`}
+                      >
+                        <td className="col-sticky" style={{ background: 'inherit' }}>
+                          <input 
+                            type="text" 
+                            className="cell-input" 
+                            value={product.sku}
+                            onChange={(e) => updateProduct(product.id, 'sku', e.target.value)}
+                          />
+                        </td>
+                        <td className="col-sticky" style={{ background: 'inherit' }}>
+                          <input 
+                            type="text" 
+                            className="cell-input" 
+                            value={product.name}
+                            onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
+                          />
+                        </td>
+                        <td>
+                          <input 
+                            type="text" 
+                            className="cell-input" 
+                            value={product.category}
+                            onChange={(e) => updateProduct(product.id, 'category', e.target.value)}
+                          />
+                        </td>
+                        <td>
+                          {product.image ? (
+                            <img src={product.image} alt="" className="mini-image" />
+                          ) : (
+                            <div className="mini-image" style={{ 
+                              background: 'repeating-linear-gradient(-45deg, #e5e7eb, #e5e7eb 4px, #f9fafb 4px, #f9fafb 8px)' 
+                            }} />
+                          )}
+                        </td>
+                        <td className="cell-wrap">
+                          <input 
+                            type="text" 
+                            className="cell-input" 
+                            value={product.description}
+                            onChange={(e) => updateProduct(product.id, 'description', e.target.value)}
+                            placeholder="Add description..."
+                          />
+                        </td>
+                        <td>
+                          <input 
+                            type="number" 
+                            className="cell-input cell-number" 
+                            value={product.price}
+                            onChange={(e) => updateProduct(product.id, 'price', parseFloat(e.target.value) || 0)}
+                          />
+                        </td>
+                        <td>
+                          <input 
+                            type="number" 
+                            className="cell-input cell-number" 
+                            value={product.stock}
+                            onChange={(e) => updateProduct(product.id, 'stock', parseInt(e.target.value) || 0)}
+                          />
+                        </td>
+                        <td>
+                          <select 
+                            className="cell-input"
+                            value={product.status}
+                            onChange={(e) => updateProduct(product.id, 'status', e.target.value)}
+                          >
+                            <option value="approved">Approved</option>
+                            <option value="pending">Pending</option>
+                            <option value="missing">Missing</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'validate' && (
+            <div className="card-grid fade-in">
+              {filteredProducts.filter(p => p.status !== 'approved').map(product => (
+                <div key={product.id} className="card">
+                  <div className="card-header">
+                    <div className="card-title">{product.name}</div>
+                    <div className="card-subtitle">{product.sku} • {product.category}</div>
+                  </div>
+                  <div className="card-body">
+                    <div className="field-label">Description</div>
+                    <div style={{ fontSize: 12 }}>{product.description || 'No description'}</div>
+                    <div className="field-label" style={{ marginTop: 4 }}>Locations ({product.locations.length})</div>
+                    <div style={{ fontSize: 12 }}>
+                      {product.locations.length > 0 ? product.locations.join(', ') : 'No locations assigned'}
+                    </div>
+                  </div>
+                  <div className="card-footer">
+                    <span className={`pill pill-${product.status === 'pending' ? 'yellow' : 'red'}`}>
+                      {getStatusIcon(product.status)}
+                      {product.status}
+                    </span>
+                    <button className="btn-primary" onClick={() => approveProduct(product.id)}>
+                      <Check size={12} style={{ marginRight: 4 }} />
+                      Approve
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'intake' && (
+            <div className="intake-form fade-in">
+              <h3 style={{ margin: '0 0 8px', fontSize: 14 }}>Add New Product</h3>
+              <div className="intake-grid">
+                <label>
+                  SKU
+                  <input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
+                </label>
+                <label>
+                  Product Name
+                  <input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
+                </label>
+                <label>
+                  Category
+                  <input type="text" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
+                </label>
+                <label>
+                  Price
+                  <input type="number" className="cell-input" style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
+                </label>
+                <label className="intake-span-2">
+                  Description
+                  <textarea className="cell-input" rows={3} style={{ border: '1px solid #d1d5db', borderRadius: 4, padding: 6 }} />
+                </label>
+              </div>
+              <div className="intake-footer">
+                <button className="btn-primary">
+                  <Plus size={12} style={{ marginRight: 4 }} />
+                  Add Product
+                </button>
+                <span className="intake-hint">Product will be added with "Pending" status</span>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'reports' && (
+            <div className="fade-in">
+              <div className="report-grid">
+                <div className="report-card">
+                  <div className="report-label">Total Products</div>
+                  <div className="report-value">{stats.total}</div>
+                </div>
+                <div className="report-card">
+                  <div className="report-label">Approved</div>
+                  <div className="report-value" style={{ color: '#16a34a' }}>{stats.approved}</div>
+                </div>
+                <div className="report-card">
+                  <div className="report-label">Pending Review</div>
+                  <div className="report-value" style={{ color: '#ca8a04' }}>{stats.pending}</div>
+                </div>
+                <div className="report-card">
+                  <div className="report-label">Missing Data</div>
+                  <div className="report-value" style={{ color: '#dc2626' }}>{stats.missing}</div>
+                </div>
+                <div className="report-card">
+                  <div className="report-label">Completion Rate</div>
+                  <div className="report-value">{Math.round((stats.approved / stats.total) * 100)}%</div>
+                </div>
+              </div>
+              <div style={{ padding: '0 10px', fontSize: 11, color: '#6b7280' }}>
+                Last synced: Today at 2:34 PM
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom Tabbar */}
+        <div className="tabbar-bottom">
+          <button 
+            className={`tabbar-item ${activeTab === 'master' ? 'tabbar-item-active' : ''}`}
+            onClick={() => setActiveTab('master')}
+          >
+            <FileText size={18} />
+            Master
+          </button>
+          <button 
+            className={`tabbar-item ${activeTab === 'validate' ? 'tabbar-item-active' : ''}`}
+            onClick={() => setActiveTab('validate')}
+          >
+            <ClipboardList size={18} />
+            Validate
+          </button>
+          <button 
+            className={`tabbar-item ${activeTab === 'intake' ? 'tabbar-item-active' : ''}`}
+            onClick={() => setActiveTab('intake')}
+          >
+            <Plus size={18} />
+            Intake
+          </button>
+          <button 
+            className={`tabbar-item ${activeTab === 'reports' ? 'tabbar-item-active' : ''}`}
+            onClick={() => setActiveTab('reports')}
+          >
+            <BarChart3 size={18} />
+            Reports
+          </button>
+        </div>
+      </div>
+    </>
+  );
 }
