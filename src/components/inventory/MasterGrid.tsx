@@ -11,6 +11,14 @@ import "../../styles/app.css";
 
 type SortState = { col: string; dir: "asc" | "desc" | null };
 
+type ColumnDef = {
+  key: string;
+  label: string;
+  group: GroupName;
+  sticky?: boolean; // Only for Status + Product Name
+  isImage?: boolean;
+};
+
 type GroupName =
   | "Core"
   | "Inventory"
@@ -26,14 +34,6 @@ type GroupName =
   | "Integrations / SEO"
   | "Lifecycle";
 
-type ColumnDef = {
-  key: string;
-  label: string;
-  group: GroupName;
-  sticky?: boolean; // Status + Product Name
-  isImage?: boolean;
-};
-
 interface ColumnFilterMenuProps {
   values: string[];
   activeValues: string[];
@@ -45,7 +45,7 @@ interface ColumnFilterMenuProps {
 }
 
 /**
- * Excel-style column filter dropdown (checkbox list, no search).
+ * Excel-style column filter dropdown (no search input).
  */
 const ColumnFilterMenu: React.FC<ColumnFilterMenuProps> = ({
   values,
@@ -110,7 +110,7 @@ export const MasterGrid: React.FC = () => {
   const headerCellRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
   const [statusWidth, setStatusWidth] = useState<number>(180);
 
-  // Fixed group order so header row is predictable
+  // ORDERED group list so header groups always line up in a predictable way
   const groupOrder: GroupName[] = [
     "Core",
     "Inventory",
@@ -127,33 +127,33 @@ export const MasterGrid: React.FC = () => {
     "Lifecycle",
   ];
 
-  // Explicit mapping of group to CSS suffix (no double hyphens)
+  // Explicit mapping for group -> class suffix (no weird extra hyphens)
   const groupClassMap: Record<GroupName, string> = {
-    Core: "core",
-    Inventory: "inventory",
-    Classification: "classification",
-    Variants: "variants",
-    Shopify: "shopify",
+    "Core": "core",
+    "Inventory": "inventory",
+    "Classification": "classification",
+    "Variants": "variants",
+    "Shopify": "shopify",
     "Pricing & Accounts": "pricing-accounts",
     "Tax & Weight": "tax-weight",
-    Fulfillment: "fulfillment",
+    "Fulfillment": "fulfillment",
     "Stock Alerts": "stock-alerts",
-    Quantities: "quantities",
-    Identifiers: "identifiers",
+    "Quantities": "quantities",
+    "Identifiers": "identifiers",
     "Integrations / SEO": "integrations-seo",
-    Lifecycle: "lifecycle",
+    "Lifecycle": "lifecycle",
   };
 
   // --- COLUMN DEFINITIONS (Product Name is SECOND column) ---
   const columns: ColumnDef[] = [
     // CORE
-    { key: "status", label: "Status", group: "Core", sticky: true },
+    { key: "status", label: "Status", group: "Core", sticky: true }, // col 1
     {
       key: "product_name",
       label: "Product Name",
       group: "Core",
       sticky: true,
-    },
+    }, // col 2
 
     // INVENTORY
     { key: "sku", label: "SKU", group: "Inventory" },
@@ -457,7 +457,7 @@ export const MasterGrid: React.FC = () => {
     },
   ];
 
-  // Group spans for header row (matching groupOrder)
+  // Group spans for header row (using fixed order)
   const groupSpans = useMemo(() => {
     const map: Record<GroupName, number> = {
       Core: 0,
@@ -480,7 +480,7 @@ export const MasterGrid: React.FC = () => {
     return map;
   }, [columns]);
 
-  // Close filter when clicking outside the grid
+  // Close filter when clicking outside
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (!containerRef.current) return;
@@ -492,7 +492,8 @@ export const MasterGrid: React.FC = () => {
     return () => window.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Measure Status header width so Product Name sticky offset lines up
+  // Measure Status column width once we have header cells,
+  // so Product Name sticky offset lines up perfectly.
   useEffect(() => {
     const el = headerCellRefs.current["status"];
     if (el) {
@@ -500,7 +501,7 @@ export const MasterGrid: React.FC = () => {
     }
   }, [rows.length]);
 
-  // Apply filters + sorting
+  // Filter + sort
   const processed = useMemo(() => {
     let data = [...rows];
 
@@ -527,14 +528,14 @@ export const MasterGrid: React.FC = () => {
     return data;
   }, [rows, filters, sort]);
 
-  // Sticky style for Status / Product Name cells
+  // Sticky style for Status / Product cells
   const getStickyStyle = (col: ColumnDef): React.CSSProperties => {
     if (!col.sticky) return {};
     if (col.key === "status") {
       return {
         position: "sticky",
         left: 0,
-        zIndex: 15,
+        zIndex: 12,
         background: "#ffffff",
       };
     }
@@ -542,7 +543,7 @@ export const MasterGrid: React.FC = () => {
       return {
         position: "sticky",
         left: statusWidth,
-        zIndex: 14,
+        zIndex: 11,
         background: "#ffffff",
       };
     }
@@ -576,7 +577,7 @@ export const MasterGrid: React.FC = () => {
       <div className="sheet-table-wrapper wide-scroll" ref={containerRef}>
         <table className="sheet-table sheet-table-master">
           <thead>
-            {/* GROUP HEADER ROW (Core sticky, color-coded) */}
+            {/* GROUP HEADER ROW (color-coded, Core sticky left) */}
             <tr className="header-group-row">
               {groupOrder.map((group) => {
                 const span = groupSpans[group];
@@ -590,14 +591,10 @@ export const MasterGrid: React.FC = () => {
                       position: "sticky",
                       left: 0,
                       top: 0,
-                      zIndex: 20,
+                      zIndex: 14,
                       background: "#dbeafe",
                     }
-                  : {
-                      position: "sticky",
-                      top: 0,
-                      zIndex: 19,
-                    };
+                  : { top: 0, position: "sticky", zIndex: 13 };
 
                 return (
                   <th
@@ -612,7 +609,7 @@ export const MasterGrid: React.FC = () => {
               })}
             </tr>
 
-            {/* COLUMN HEADERS (each with filter dropdown) */}
+            {/* COLUMN HEADERS (each with filter) */}
             <tr className="column-header-row">
               {columns.map((col) => {
                 const stickyStyle = getStickyStyle(col);
@@ -728,3 +725,4 @@ export const MasterGrid: React.FC = () => {
     </div>
   );
 };
+
