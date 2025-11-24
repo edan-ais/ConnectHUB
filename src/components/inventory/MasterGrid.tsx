@@ -31,7 +31,7 @@ export const MasterGrid: React.FC = () => {
 
   return (
     <div className="sheet-container">
-      <div className="sheet-name">Master (Source of Truth)</div>
+      <div className="sheet-name">Master</div>
       <div className="sheet-table-wrapper">
         <table className="sheet-table">
           <thead>
