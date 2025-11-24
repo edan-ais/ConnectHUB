@@ -14,25 +14,10 @@ type SortState = { col: string; dir: "asc" | "desc" | null };
 type ColumnDef = {
   key: string;
   label: string;
-  group: GroupName;
-  sticky?: boolean; // Only for Status + Product Name
+  group: string;
+  sticky?: boolean; // Status + Product Name
   isImage?: boolean;
 };
-
-type GroupName =
-  | "Core"
-  | "Inventory"
-  | "Classification"
-  | "Variants"
-  | "Shopify"
-  | "Pricing & Accounts"
-  | "Tax & Weight"
-  | "Fulfillment"
-  | "Stock Alerts"
-  | "Quantities"
-  | "Identifiers"
-  | "Integrations / SEO"
-  | "Lifecycle";
 
 interface ColumnFilterMenuProps {
   values: string[];
@@ -92,8 +77,7 @@ const ColumnFilterMenu: React.FC<ColumnFilterMenuProps> = ({
           Close
         </button>
         <button className="filter-action-btn primary" onClick={close}>
-          Apply
-        </button>
+          Apply</button>
       </div>
     </div>
   );
@@ -107,42 +91,8 @@ export const MasterGrid: React.FC = () => {
   const [openCol, setOpenCol] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const headerCellRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
+  const colRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
   const [statusWidth, setStatusWidth] = useState<number>(180);
-
-  // ORDERED group list so header groups always line up in a predictable way
-  const groupOrder: GroupName[] = [
-    "Core",
-    "Inventory",
-    "Classification",
-    "Variants",
-    "Shopify",
-    "Pricing & Accounts",
-    "Tax & Weight",
-    "Fulfillment",
-    "Stock Alerts",
-    "Quantities",
-    "Identifiers",
-    "Integrations / SEO",
-    "Lifecycle",
-  ];
-
-  // Explicit mapping for group -> class suffix (no weird extra hyphens)
-  const groupClassMap: Record<GroupName, string> = {
-    "Core": "core",
-    "Inventory": "inventory",
-    "Classification": "classification",
-    "Variants": "variants",
-    "Shopify": "shopify",
-    "Pricing & Accounts": "pricing-accounts",
-    "Tax & Weight": "tax-weight",
-    "Fulfillment": "fulfillment",
-    "Stock Alerts": "stock-alerts",
-    "Quantities": "quantities",
-    "Identifiers": "identifiers",
-    "Integrations / SEO": "integrations-seo",
-    "Lifecycle": "lifecycle",
-  };
 
   // --- COLUMN DEFINITIONS (Product Name is SECOND column) ---
   const columns: ColumnDef[] = [
@@ -457,28 +407,16 @@ export const MasterGrid: React.FC = () => {
     },
   ];
 
-  // Group spans for header row (using fixed order)
+  // Group spans for header row
   const groupSpans = useMemo(() => {
-    const map: Record<GroupName, number> = {
-      Core: 0,
-      Inventory: 0,
-      Classification: 0,
-      Variants: 0,
-      Shopify: 0,
-      "Pricing & Accounts": 0,
-      "Tax & Weight": 0,
-      Fulfillment: 0,
-      "Stock Alerts": 0,
-      Quantities: 0,
-      Identifiers: 0,
-      "Integrations / SEO": 0,
-      Lifecycle: 0,
-    };
+    const map: Record<string, number> = {};
     columns.forEach((c) => {
       map[c.group] = (map[c.group] || 0) + 1;
     });
     return map;
   }, [columns]);
+
+  const uniqueGroups = Object.keys(groupSpans);
 
   // Close filter when clicking outside
   useEffect(() => {
@@ -492,10 +430,9 @@ export const MasterGrid: React.FC = () => {
     return () => window.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Measure Status column width once we have header cells,
-  // so Product Name sticky offset lines up perfectly.
+  // Measure Status column width once we have rows, to align Product Name sticky left
   useEffect(() => {
-    const el = headerCellRefs.current["status"];
+    const el = colRefs.current["status"];
     if (el) {
       setStatusWidth(el.offsetWidth || 180);
     }
@@ -505,22 +442,20 @@ export const MasterGrid: React.FC = () => {
   const processed = useMemo(() => {
     let data = [...rows];
 
-    for (const colKey of Object.keys(filters)) {
-      const allowed = filters[colKey];
-      if (!allowed || allowed.length === 0) continue;
-      data = data.filter((row: any) =>
-        allowed.includes(String(row[colKey] ?? ""))
+    for (const col of Object.keys(filters)) {
+      const allowed = filters[col];
+      if (!allowed.length) continue;
+      data = data.filter((row) =>
+        allowed.includes(String((row as any)[col] ?? ""))
       );
     }
 
     if (sort.col && sort.dir) {
-      const colKey = sort.col;
-      const dir = sort.dir;
-      data.sort((a: any, b: any) => {
-        const A = String(a[colKey] ?? "").toLowerCase();
-        const B = String(b[colKey] ?? "").toLowerCase();
-        if (A < B) return dir === "asc" ? -1 : 1;
-        if (A > B) return dir === "asc" ? 1 : -1;
+      data.sort((a, b) => {
+        const A = String((a as any)[sort.col] ?? "").toLowerCase();
+        const B = String((b as any)[sort.col] ?? "").toLowerCase();
+        if (A < B) return sort.dir === "asc" ? -1 : 1;
+        if (A > B) return sort.dir === "asc" ? 1 : -1;
         return 0;
       });
     }
@@ -535,7 +470,7 @@ export const MasterGrid: React.FC = () => {
       return {
         position: "sticky",
         left: 0,
-        zIndex: 12,
+        zIndex: 10,
         background: "#ffffff",
       };
     }
@@ -543,7 +478,7 @@ export const MasterGrid: React.FC = () => {
       return {
         position: "sticky",
         left: statusWidth,
-        zIndex: 11,
+        zIndex: 9,
         background: "#ffffff",
       };
     }
@@ -553,7 +488,7 @@ export const MasterGrid: React.FC = () => {
   if (loading) {
     return (
       <div className="sheet-container">
-        <div className="sheet-name sheet-name-large">Master (loading…)</div>
+        <div className="sheet-name">Master (loading…)</div>
         <div className="empty-state">Loading Master inventory…</div>
       </div>
     );
@@ -562,45 +497,43 @@ export const MasterGrid: React.FC = () => {
   if (error) {
     return (
       <div className="sheet-container">
-        <div className="sheet-name sheet-name-large">Master (error)</div>
+        <div className="sheet-name">Master (error)</div>
         <div className="empty-state">Error: {error}</div>
       </div>
     );
   }
 
   return (
-    <div className="sheet-container fade-in">
+    <div className="sheet-container fade-in" ref={containerRef}>
       <div className="sheet-name sheet-name-large">
         Master (Source of Truth · read-only)
       </div>
 
-      <div className="sheet-table-wrapper wide-scroll" ref={containerRef}>
+      <div className="sheet-table-wrapper wide-scroll">
         <table className="sheet-table sheet-table-master">
           <thead>
-            {/* GROUP HEADER ROW (color-coded, Core sticky left) */}
+            {/* GROUP HEADER ROW (secondary headers, color-coded) */}
             <tr className="header-group-row">
-              {groupOrder.map((group) => {
+              {uniqueGroups.map((group) => {
                 const span = groupSpans[group];
-                if (!span) return null;
-
-                const classSuffix = groupClassMap[group];
+                const slug = group.toLowerCase().replace(/[^a-z0-9]+/g, "-");
                 const isCore = group === "Core";
 
+                // ONLY Core header cell is sticky on the left
                 const style: React.CSSProperties = isCore
                   ? {
                       position: "sticky",
                       left: 0,
-                      top: 0,
-                      zIndex: 14,
+                      zIndex: 11,
                       background: "#dbeafe",
                     }
-                  : { top: 0, position: "sticky", zIndex: 13 };
+                  : {};
 
                 return (
                   <th
                     key={group}
                     colSpan={span}
-                    className={`header-group-cell header-group-${classSuffix}`}
+                    className={`header-group-cell header-group-${slug}`}
                     style={style}
                   >
                     {group}
@@ -610,13 +543,13 @@ export const MasterGrid: React.FC = () => {
             </tr>
 
             {/* COLUMN HEADERS (each with filter) */}
-            <tr className="column-header-row">
+            <tr>
               {columns.map((col) => {
                 const stickyStyle = getStickyStyle(col);
 
                 const uniqueValues = Array.from(
                   new Set(
-                    rows.map((r: any) => String(r[col.key] ?? ""))
+                    rows.map((r) => String((r as any)[col.key] ?? ""))
                   )
                 ).sort((a, b) => a.localeCompare(b));
 
@@ -629,7 +562,7 @@ export const MasterGrid: React.FC = () => {
                     key={col.key}
                     style={stickyStyle}
                     ref={(el) => {
-                      headerCellRefs.current[col.key] = el;
+                      colRefs.current[col.key] = el;
                     }}
                   >
                     <div className="header-cell">
@@ -656,11 +589,15 @@ export const MasterGrid: React.FC = () => {
                               [col.key]: vals,
                             }))
                           }
-                          sortAsc={() => setSort({ col: col.key, dir: "asc" })}
+                          sortAsc={() =>
+                            setSort({ col: col.key, dir: "asc" })
+                          }
                           sortDesc={() =>
                             setSort({ col: col.key, dir: "desc" })
                           }
-                          clearSort={() => setSort({ col: "", dir: null })}
+                          clearSort={() =>
+                            setSort({ col: "", dir: null })
+                          }
                           close={() => setOpenCol(null)}
                         />
                       )}
@@ -672,16 +609,16 @@ export const MasterGrid: React.FC = () => {
           </thead>
 
           <tbody>
-            {processed.map((row: any) => (
+            {processed.map((row) => (
               <tr
                 key={row.id}
                 className={`master-row row-status-${String(
-                  row.status || ""
+                  (row as any).status || ""
                 ).toLowerCase()}`}
               >
                 {columns.map((col) => {
                   const stickyStyle = getStickyStyle(col);
-                  let value: any = row[col.key];
+                  let value: any = (row as any)[col.key];
 
                   if (typeof value === "boolean") {
                     value = value ? "Yes" : "";
